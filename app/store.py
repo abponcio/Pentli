@@ -58,13 +58,13 @@ class DynamoStore:
         return copy.deepcopy(obj)
 
     def get(self, kind: str, obj_id: str) -> dict | None:
-        item = self._table.get_item(Key={"pk": kind, "sk": obj_id}).get("Item")
+        item = self._table.get_item(Key={"pk": kind, "sk": obj_id}, ConsistentRead=True).get("Item")
         return json.loads(item["doc"]) if item else None
 
     def list(self, kind: str, **filters) -> list[dict]:
         from boto3.dynamodb.conditions import Key
 
-        items, kwargs = [], {"KeyConditionExpression": Key("pk").eq(kind)}
+        items, kwargs = [], {"KeyConditionExpression": Key("pk").eq(kind), "ConsistentRead": True}
         while True:
             page = self._table.query(**kwargs)
             items += [json.loads(i["doc"]) for i in page["Items"]]
@@ -80,9 +80,36 @@ class DynamoStore:
             return self.put(kind, obj)
 
     def clear(self) -> None:
-        for kind in ("donor", "recipient", "driver", "rescue", "offer", "job", "impact"):
-            for obj in self.list(kind):
-                self._table.delete_item(Key={"pk": kind, "sk": obj["id"]})
+        from boto3.dynamodb.conditions import Key
+
+        with self._table.batch_writer() as batch:
+            for kind in ("donor", "recipient", "driver", "rescue", "offer", "job", "impact", "photo"):
+                kwargs = {"KeyConditionExpression": Key("pk").eq(kind), "ProjectionExpression": "pk, sk"}
+                while True:
+                    page = self._table.query(**kwargs)
+                    for item in page["Items"]:
+                        batch.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+                    if "LastEvaluatedKey" not in page:
+                        break
+                    kwargs["ExclusiveStartKey"] = page["LastEvaluatedKey"]
+
+    # Shared counters and settings (used when several copies of the app run at once, as on Lambda).
+    def next_number(self, name: str, start: int) -> int:
+        """Atomically hand out start, start+1, ... for this counter."""
+        item = self._table.update_item(
+            Key={"pk": "meta", "sk": name}, UpdateExpression="ADD n :one",
+            ExpressionAttributeValues={":one": 1}, ReturnValues="UPDATED_NEW")["Attributes"]
+        return start + int(item["n"]) - 1
+
+    def set_meta(self, name: str, value) -> None:
+        self._table.put_item(Item={"pk": "meta", "sk": name, "doc": json.dumps(value)})
+
+    def get_meta(self, name: str):
+        item = self._table.get_item(Key={"pk": "meta", "sk": name}, ConsistentRead=True).get("Item")
+        return json.loads(item["doc"]) if item and "doc" in item else None
+
+    def delete_meta(self, name: str) -> None:
+        self._table.delete_item(Key={"pk": "meta", "sk": name})
 
 
 def _make_store():

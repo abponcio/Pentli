@@ -67,3 +67,8 @@ CO2E_PER_KG_FOOD = float(_env("CO2E_PER_KG_FOOD", "2.5"))
 CO2E_SOURCE = _env("CO2E_SOURCE", "placeholder factor: replace with a cited source before the pitch")
 
 PUBLIC_BASE_URL = _env("PUBLIC_BASE_URL", "")
+
+# On AWS Lambda many short-lived copies of the app run at once, so shared state (events, clock, counters,
+# photos) lives in DynamoDB and S3, and the agent runs in its own background invocation.
+SERVERLESS = bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+TASK_TOKEN = _env("TASK_TOKEN", "")  # guards the background-task route on Lambda

@@ -96,6 +96,18 @@ Then open `https://<host>/ops` on the big screen and `https://<host>/kitchen` on
 
 Phone notifications and the microphone need HTTPS. On EC2, put the instance behind an ALB with an ACM certificate, or use App Runner, which gives you HTTPS by default.
 
+## Hackathon account (AWS Lambda, us-west-2)
+
+The Workshop Studio account has no EC2, ECS, App Runner or Lightsail access, and IAM role names must start with `workshop-`. There the app runs as one Lambda function behind a public HTTPS function URL, using the AWS Lambda Web Adapter so the FastAPI app runs unchanged. Because many copies of the function run at once, the live event stream, demo clock, counters and photo index live in DynamoDB and S3 (`config.SERVERLESS` switches this on automatically inside Lambda), and each rescue's agent runs in its own background invocation of the same function.
+
+```bash
+aws cloudformation deploy --region us-west-2 --stack-name plentli-demo \
+  --template-file infra/workshop.yaml --capabilities CAPABILITY_NAMED_IAM
+python infra/deploy_lambda.py        # prints PLENTLI_URL; run again to ship a new version
+```
+
+Production would run in `me-central-1` for UAE data residency; the hackathon account only allows `us-west-2` and `us-east-1`.
+
 ## 6. Tear down
 
 ```bash

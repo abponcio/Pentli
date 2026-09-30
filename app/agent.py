@@ -223,5 +223,21 @@ def _run(rescue_id: str) -> None:
             events.emit("rescue", rescue_id, ["ops"], rescue=tools.public_rescue(rescue))
 
 
+def run(rescue_id: str) -> None:
+    """Run one rescue to the end in this process (the Lambda background invocation calls this)."""
+    _run(rescue_id)
+
+
 def start(rescue_id: str) -> None:
+    if config.SERVERLESS:
+        # A Lambda copy stops working once its response is sent, so the agent gets its own invocation.
+        import json
+        import os
+
+        import boto3
+
+        boto3.client("lambda", region_name=config.AWS_REGION).invoke(
+            FunctionName=os.environ["AWS_LAMBDA_FUNCTION_NAME"], InvocationType="Event",
+            Payload=json.dumps({"task": "run_agent", "rescue_id": rescue_id, "token": config.TASK_TOKEN}).encode())
+        return
     threading.Thread(target=_run, args=(rescue_id,), daemon=True, name=f"rescue-{rescue_id}").start()
