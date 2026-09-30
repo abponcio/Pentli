@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a4d">
+  <title>Plenty · Driver</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="app-bar">
+    <div class="avatar" aria-hidden="true">🚐</div>
+    <div>
+      <div class="title" id="van">Plenty</div>
+      <div class="sub" id="who"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="lang-toggle" type="button" data-t="switch">عربي</button>
+  </header>
+
+  <main class="wrap">
+    <button class="btn block" type="button" id="alerts" data-t="alerts_on">Turn on alerts</button>
+    <div id="job" style="margin-block-start:12px"></div>
+    <div class="empty" id="idle" data-t="driver_idle">No job yet.</div>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    Object.assign(STRINGS.en, { deliver_to: "Drop off", all_done: "All drops done. Thank you!", cold_box: "Keep in the cold box", eta: "ETA" });
+    Object.assign(STRINGS.ar, { deliver_to: "التوصيل", all_done: "تم كل التوصيلات. شكراً لك!", cold_box: "يُحفظ في الصندوق المبرد", eta: "الوصول" });
+
+    const DRIVER = new URLSearchParams(location.search).get("d") || "d1";
+    const jobEl = document.getElementById("job");
+    const idle = document.getElementById("idle");
+    let current = null; // {rescueId, route, texts}
+
+    async function boot() {
+      const state = await api("/api/state");
+      const me = state.drivers.find((d) => d.id === DRIVER) || state.drivers[0];
+      document.getElementById("van").textContent = me.name;
+      document.getElementById("who").textContent = me.driver;
+      initAlertsButton(document.getElementById("alerts"));
+      document.addEventListener("langchange", render);
+      listen(`driver:${DRIVER}`, (e) => {
+        if (e.kind === "reset") { current = null; render(); return; }
+        if (e.kind === "message" && e.job) {
+          current = { rescueId: e.rescue_id, route: e.job.route, texts: e.texts };
+          alertUser(t("job"), pickText(e.texts), e);
+        } else if (e.kind === "job" && current && e.rescue_id === current.rescueId) {
+          current.route = e.route;
+        } else return;
+        render();
+      });
+    }
+
+    const mapsLink = (p) => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+
+    async function act(action, stopId, button) {
+      button.disabled = true;
+      try {
+        const res = await postJSON("/api/stops", { rescue_id: current.rescueId, stop_id: stopId || "", action });
+        current.route = res.route; render();
+      } catch (err) { button.disabled = false; alertUser("Error", err.message); }
+    }
+
+    function stopRow(num, title, sub, done, doneLabel, actionLabel, onAct, place) {
+      return el("div", { class: "stop" },
+        el("div", { class: "num" }, done ? "✓" : String(num)),
+        el("div", { class: "body" },
+          el("strong", {}, title), el("div", { class: "muted" }, sub),
+          el("div", { class: "actions" },
+            el("a", { class: "btn", href: mapsLink(place), target: "_blank", rel: "noopener" }, t("navigate")),
+            done ? el("span", { class: "badge good", style: "align-self:center" }, doneLabel)
+                 : el("button", { class: "btn primary", type: "button", onclick: (ev) => onAct(ev.target) }, actionLabel))));
+    }
+
+    function render() {
+      jobEl.replaceChildren();
+      idle.hidden = !!current;
+      if (!current) return;
+      const { route, texts } = current;
+      const total = route.stops.reduce((n, s) => n + s.portions, 0);
+      const pickedUp = route.pickup.status === "done";
+      const card = el("article", { class: "card" },
+        el("h2", {}, `${t("job")} · ${total} ${t("portions_short")}`),
+        el("p", { class: "muted" }, pickText(texts)),
+        texts.ur ? el("p", { class: "muted", dir: "rtl", lang: "ur" }, texts.ur) : null,
+        el("p", {}, el("span", { class: "badge warn" }, `❄ ${t("cold_box")}`)));
+      const stops = el("article", { class: "card" });
+      stops.append(stopRow(1, `${t("pickup")}: ${route.pickup.name || "HelloChef Kitchen, Al Quoz"}`,
+        `${t("eta")} ${route.pickup.eta_hhmm} · ${total} ${t("portions_short")}`,
+        pickedUp, t("picked_up"), t("mark_picked"), (b) => act("picked_up", "", b), route.pickup));
+      route.stops.forEach((s, i) => {
+        const done = s.status === "delivered" || s.status === "received";
+        const row = stopRow(i + 2, `${t("deliver_to")}: ${LANG === "ar" ? s.name_ar : s.name}`,
+          `${t("eta")} ${s.eta_hhmm} · ${s.portions} ${t("portions_short")}`,
+          done, t("delivered"), t("mark_delivered"), (b) => act("delivered", s.id, b), s);
+        if (!pickedUp && !done) row.querySelector("button")?.setAttribute("disabled", "");
+        stops.append(row);
+      });
+      jobEl.append(card, stops);
+      if (route.stops.every((s) => s.status !== "pending")) jobEl.append(el("div", { class: "card ok-banner" }, t("all_done")));
+    }
+
+    boot();
+  </script>
+</body>
+</html>

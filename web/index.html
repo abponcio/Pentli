@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a4d">
+  <title>Plenty</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <style>
+    .hero h1 { margin: 0 0 6px; font-size: 1.6rem; }
+    .screens { display: grid; gap: 10px; margin-block: 16px; }
+    .screen { display: flex; gap: 14px; align-items: center; text-decoration: none; color: var(--ink); }
+    .screen .icon { font-size: 1.6rem; inline-size: 44px; text-align: center; flex: none; }
+    .screen strong { display: block; }
+    .qr-row { display: flex; gap: 16px; align-items: center; }
+    #qrcode { background: #fff; padding: 8px; border-radius: 8px; flex: none; }
+    .qr-row > div { min-inline-size: 0; }
+    #judge-link { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header class="app-bar">
+    <div class="avatar" aria-hidden="true">P</div>
+    <div>
+      <div class="title">Plenty</div>
+      <div class="sub">Agentic food rescue for Dubai kitchens</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Surplus food to people who need it, before it becomes unsafe.</h1>
+      <p class="muted">A kitchen sends one message. An AI agent works out what the food is, how long it stays safe, who can use it, and which van can get it there in time. Code enforces every food-safety rule.</p>
+    </section>
+
+    <nav class="screens" aria-label="Screens">
+      <a class="card screen" href="/kitchen"><span class="icon">👩‍🍳</span><span><strong>Kitchen</strong><span class="muted">Mohsen reports surplus by chat, photo or voice</span></span></a>
+      <a class="card screen" href="/coordinator?r=r3"><span class="icon">🏠</span><span><strong>Charity coordinator</strong><span class="muted">Hope Family Shelter gets offers and accepts or declines</span></span></a>
+      <a class="card screen" href="/driver?d=d1"><span class="icon">🚐</span><span><strong>Driver</strong><span class="muted">HelloChef Van 14 gets the pickup and drop-off route</span></span></a>
+      <a class="card screen" href="/ops"><span class="icon">📊</span><span><strong>Live rescue (big screen)</strong><span class="muted">Agent trace, map, safety clock and impact</span></span></a>
+    </nav>
+
+    <section class="card qr-row">
+      <img id="qrcode" alt="" width="128" height="128">
+      <div>
+        <strong>Judges: be the shelter</strong>
+        <p class="muted" style="margin:4px 0">Scan to open Hope Family Shelter's screen on your phone.</p>
+        <a id="judge-link" href="/coordinator?r=r3">/coordinator?r=r3</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Demo controls</h2>
+      <p class="muted" id="mode">Loading…</p>
+      <button class="btn danger" type="button" id="reset">Reset demo</button>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    (async () => {
+      const cfg = await api("/api/config");
+      document.getElementById("mode").textContent =
+        `Agent: ${cfg.agent_mode === "bedrock" ? cfg.model : "mock planner (no AWS needed)"}. Store: ${cfg.store}. Routing: ${cfg.routing}. Alerts: ${cfg.notify}. Dubai time: ${cfg.now}.`;
+      const url = `${cfg.public_base_url || location.origin}/coordinator?r=r3`;
+      const link = document.getElementById("judge-link");
+      link.href = url; link.textContent = url;
+      document.getElementById("qrcode").src = `/api/qr.svg?url=${encodeURIComponent(url)}`;
+    })();
+    document.getElementById("reset").addEventListener("click", async () => {
+      const res = await postJSON("/api/reset", {});
+      alertUser("Demo reset", `Clock set to ${res.now}`);
+    });
+  </script>
+</body>
+</html>

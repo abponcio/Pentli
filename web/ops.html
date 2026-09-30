@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plenty · Live rescue</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <style>
+    .ops { display: grid; gap: 16px; padding: 16px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); max-inline-size: 1500px; margin: 0 auto; }
+    @media (max-width: 900px) { .ops { grid-template-columns: 1fr; } }
+    .panel-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 1rem; }
+    .trace { display: flex; flex-direction: column; gap: 8px; max-block-size: calc(100dvh - 150px); overflow-y: auto; padding-inline-end: 4px; }
+    .line { display: grid; grid-template-columns: 64px auto 1fr; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 0.92rem; animation: in 0.25s ease-out; }
+    .line .when { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 0.8rem; padding-block-start: 2px; }
+    .line .step { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; }
+    .line .summary { grid-column: 2 / -1; overflow-wrap: anywhere; }
+    .line.reasoning { background: var(--ai-soft); }
+    .line.reasoning .summary { font-style: italic; color: var(--ai); }
+    .line.warn { background: var(--warn-soft); }
+    .line.blocked { background: var(--bad-soft); }
+    .line.blocked .summary { color: var(--bad); font-weight: 600; }
+    @keyframes in { from { opacity: 0; translate: 0 6px; } }
+    @media (prefers-reduced-motion: reduce) { .line { animation: none; } }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+    .stat .v { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat .k { font-size: 0.78rem; color: var(--ink-2); }
+    .stat.hot .v { color: var(--brand); }
+    #map { block-size: 340px; border-radius: 12px; border: 1px solid var(--line); z-index: 0; }
+    .side { display: flex; flex-direction: column; gap: 12px; }
+    .side .card + .card { margin: 0; }
+    .offers { display: grid; gap: 6px; }
+    .offer-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.92rem; }
+    .impact { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 8px; }
+    .impact .v { font-size: 1.8rem; font-weight: 700; color: var(--brand); }
+    .qr { display: flex; gap: 14px; align-items: center; }
+    .qr #qrcode { background: #fff; padding: 8px; border-radius: 8px; flex: none; }
+    .facts-line { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 6px; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-2); margin-block-start: 6px; }
+    .dot { display: inline-block; inline-size: 10px; block-size: 10px; border-radius: 50%; margin-inline-end: 4px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+  <header class="app-bar">
+    <div class="avatar" aria-hidden="true">P</div>
+    <div>
+      <div class="title">Plenty · live rescue</div>
+      <div class="sub" id="mode">connecting…</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="lang-toggle" href="/" style="display:grid;place-items:center;text-decoration:none">Screens</a>
+    <button class="lang-toggle" type="button" id="reset">Reset demo</button>
+  </header>
+
+  <main class="ops">
+    <section class="card">
+      <h2 class="panel-title">Agent trace
+        <span class="badge ai">AI decides</span><span class="badge code">CODE enforces</span></h2>
+      <div class="trace" id="trace">
+        <div class="empty">Waiting for a kitchen to report surplus food…</div>
+      </div>
+    </section>
+
+    <section class="side">
+      <div class="stats">
+        <div class="stat hot"><div class="v" id="timer">0:00</div><div class="k">time to confirmed driver</div></div>
+        <div class="stat"><div class="v" id="tools">0</div><div class="k">agent tool calls</div></div>
+        <div class="stat"><div class="v" id="placed">0/0</div><div class="k">portions placed</div></div>
+        <div class="stat"><div class="v" id="serveby">--:--</div><div class="k">serve by (food safety)</div></div>
+      </div>
+
+      <div class="card" id="rescue-card">
+        <h2 class="panel-title">Rescue <span class="badge" id="status">idle</span></h2>
+        <div id="rescue-body" class="muted">No rescue yet.</div>
+      </div>
+
+      <div class="card">
+        <div id="map" role="img" aria-label="Map of the kitchen, partners, drivers and route"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:#1f7a4d"></span>kitchen</span>
+          <span><span class="dot" style="background:#2e7dd7"></span>partner</span>
+          <span><span class="dot" style="background:#e39b20"></span>offered</span>
+          <span><span class="dot" style="background:#18a058"></span>accepted</span>
+          <span><span class="dot" style="background:#d03b30"></span>declined / blocked</span>
+          <span><span class="dot" style="background:#6b4fd8"></span>driver</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="panel-title">Offers</h2>
+        <div class="offers" id="offers"><div class="muted">None yet.</div></div>
+      </div>
+
+      <div class="card hidden" id="impact-card">
+        <h2 class="panel-title">Impact <span class="badge good">handover recorded</span></h2>
+        <div class="impact">
+          <div><div class="v" id="meals">0</div><div class="muted">meals</div></div>
+          <div><div class="v" id="kg">0</div><div class="muted">kg food saved</div></div>
+          <div><div class="v" id="co2">0</div><div class="muted">kg CO2e avoided</div></div>
+        </div>
+        <p class="muted" id="co2-source" style="margin-block-end:0"></p>
+      </div>
+
+      <div class="card qr">
+        <img id="qrcode" alt="" width="128" height="128">
+        <div>
+          <strong>Be the shelter</strong>
+          <p class="muted" style="margin:4px 0">Scan to play Hope Family Shelter. Accept or decline the offer live.</p>
+          <a id="judge-link" href="/coordinator?r=r3">Open the shelter screen</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/vendor/leaflet/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+  <script>
+    const traceEl = document.getElementById("trace");
+    let world = null;           // seed data from /api/state
+    let rescue = null;          // latest rescue record
+    const offers = new Map();   // offer id -> offer
+    let timerHandle = null;
+
+    const COLORS = { kitchen: "#1f7a4d", partner: "#2e7dd7", offered: "#e39b20", accepted: "#18a058", declined: "#d03b30", driver: "#6b4fd8" };
+    let map, layers;
+    function initMap() {
+      if (!window.L) { document.getElementById("map").textContent = "Map unavailable offline."; return; }
+      map = L.map("map", { zoomControl: false, attributionControl: true }).setView([25.14, 55.23], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
+      layers = L.layerGroup().addTo(map);
+    }
+
+    function marker(p, color, label, radius = 9) {
+      return L.circleMarker([p.lat, p.lng], { radius, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip(label);
+    }
+
+    function recipientColor(id) {
+      if (!rescue) return COLORS.partner;
+      if (rescue.accepted && rescue.accepted[id]) return COLORS.accepted;
+      if ((rescue.declined || []).includes(id)) return COLORS.declined;
+      if (rescue.dietary && rescue.dietary[id] && !rescue.dietary[id].ok) return COLORS.declined;
+      if ([...offers.values()].some((o) => o.recipient_id === id && o.status === "pending")) return COLORS.offered;
+      return COLORS.partner;
+    }
+
+    function drawMap() {
+      if (!map || !world) return;
+      layers.clearLayers();
+      const pts = [];
+      world.donors.forEach((d) => { marker(d, COLORS.kitchen, d.name, 11).addTo(layers); pts.push([d.lat, d.lng]); });
+      world.recipients.forEach((r) => { marker(r, recipientColor(r.id), r.name).addTo(layers); pts.push([r.lat, r.lng]); });
+      world.drivers.forEach((d) => marker(d, COLORS.driver, `${d.name} (${d.driver})`, 7).addTo(layers));
+      const route = rescue && rescue.route;
+      if (route) {
+        const path = [route.driver_start, route.pickup, ...route.stops].map((p) => [p.lat, p.lng]);
+        L.polyline(path, { color: COLORS.driver, weight: 4, opacity: 0.85, dashArray: "8 6" }).addTo(layers);
+        marker(route.driver_start, COLORS.driver, "Driver", 10).addTo(layers);
+      }
+      if (!drawMap.fitted) {
+        map.fitBounds(pts.filter((p) => Math.abs(p[1] - 55.23) < 0.08), { padding: [24, 24] });
+        drawMap.fitted = true;
+      }
+    }
+
+    function hhmm(ts) { return new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }).slice(0, 8); }
+
+    function addTrace(e) {
+      traceEl.querySelector(".empty")?.remove();
+      const isAI = e.actor.startsWith("AI");
+      const cls = ["line", e.step === "reasoning" ? "reasoning" : "", e.status !== "ok" ? e.status : ""].join(" ");
+      const row = el("div", { class: cls },
+        el("span", { class: "when" }, e.clock || hhmm(e.ts)),
+        el("span", {}, el("span", { class: `badge ${isAI ? "ai" : "code"}` }, e.actor)),
+        el("span", { class: "step" }, e.step === "reasoning" ? "thinking" : e.step),
+        el("span", { class: "summary" }, e.summary));
+      traceEl.append(row);
+      traceEl.scrollTop = traceEl.scrollHeight;
+    }
+
+    function fmtTime(iso) { return iso ? iso.slice(11, 16) : "--:--"; }
+    function clockText(seconds) { const s = Math.max(0, Math.round(seconds)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+
+    function tickTimer() {
+      if (!rescue) { document.getElementById("timer").textContent = "0:00"; return; }
+      const end = rescue.dispatched_ts || Date.now() / 1000;
+      document.getElementById("timer").textContent = clockText(end - rescue.created_ts);
+    }
+
+    const STATUS_TONE = { dispatched: "good", delivering: "good", completed: "good", expired: "bad", failed: "bad", waiting_donor: "warn", offering: "warn" };
+
+    function renderRescue() {
+      const statusEl = document.getElementById("status");
+      if (!rescue) { statusEl.textContent = "idle"; statusEl.className = "badge"; return; }
+      statusEl.textContent = rescue.status.replace("_", " ");
+      statusEl.className = `badge ${STATUS_TONE[rescue.status] || ""}`;
+      document.getElementById("tools").textContent = rescue.tool_calls || 0;
+      const f = rescue.facts;
+      const total = (f && f.portions) || 0;
+      const placed = Object.values(rescue.accepted || {}).reduce((a, b) => a + b, 0);
+      document.getElementById("placed").textContent = `${placed}/${total}`;
+      document.getElementById("serveby").textContent = rescue.safety ? fmtTime(rescue.safety.safe_until) : "--:--";
+      const body = document.getElementById("rescue-body");
+      body.replaceChildren();
+      body.classList.remove("muted");
+      body.append(el("div", {}, `"${rescue.note}"`, ...(rescue.replies || []).map((r) => ` + "${r}"`)));
+      if (f) {
+        const chips = el("div", { class: "facts-line" },
+          el("span", { class: "badge" }, `${f.portions ?? "?"} × ${f.dish}`),
+          el("span", { class: f.allergens.length ? "badge warn" : "badge" }, `allergens: ${f.allergens.join(", ") || "none"}`),
+          el("span", { class: "badge" }, f.halal ? "halal" : "not halal"),
+          el("span", { class: "badge" }, f.storage),
+          f.prepared_at ? el("span", { class: "badge" }, `cooked ${fmtTime(f.prepared_at)}`) : null,
+          rescue.safety ? el("span", { class: `badge ${rescue.safety.urgency === "EXPIRED" ? "bad" : "warn"}` }, `urgency ${rescue.safety.urgency}`) : null);
+        body.append(chips);
+        if (rescue.safety && rescue.safety.rule) body.append(el("div", { class: "muted", style: "margin-block-start:6px" }, `Rule: ${rescue.safety.rule}`));
+      }
+      if (rescue.route) {
+        const d = world.drivers.find((x) => x.id === rescue.route.driver_id);
+        body.append(el("div", { style: "margin-block-start:8px" },
+          el("strong", {}, `${d ? d.name + " (" + d.driver + ")" : rescue.route.driver_id}: `),
+          `pickup ${rescue.route.pickup.eta_hhmm}` + rescue.route.stops.map((s) => `, ${s.name} ${s.eta_hhmm} (${s.status})`).join("")));
+      }
+      tickTimer();
+    }
+
+    function renderOffers() {
+      const wrap = document.getElementById("offers");
+      wrap.replaceChildren();
+      if (!offers.size) { wrap.append(el("div", { class: "muted" }, "None yet.")); return; }
+      const names = Object.fromEntries(world.recipients.map((r) => [r.id, r.name]));
+      const tone = { pending: "warn", accepted: "good", declined: "bad", expired: "" };
+      for (const o of offers.values()) {
+        wrap.append(el("div", { class: "offer-row" },
+          el("span", {}, `${names[o.recipient_id] || o.recipient_id} · ${o.portions}`),
+          el("span", { class: `badge ${tone[o.status] || ""}` }, o.status + (o.simulated ? " (sim)" : ""))));
+      }
+    }
+
+    function renderImpact(impact) {
+      const card = document.getElementById("impact-card");
+      if (!impact) { card.classList.add("hidden"); return; }
+      card.classList.remove("hidden");
+      document.getElementById("meals").textContent = impact.meals;
+      document.getElementById("kg").textContent = impact.kg;
+      document.getElementById("co2").textContent = impact.co2e_kg;
+      document.getElementById("co2-source").textContent = `CO2e factor: ${impact.co2e_source}`;
+    }
+
+    function resetView() {
+      rescue = null; offers.clear();
+      traceEl.replaceChildren(el("div", { class: "empty" }, "Waiting for a kitchen to report surplus food…"));
+      document.getElementById("rescue-body").textContent = "No rescue yet.";
+      document.getElementById("rescue-body").classList.add("muted");
+      ["tools"].forEach((id) => { document.getElementById(id).textContent = "0"; });
+      document.getElementById("placed").textContent = "0/0";
+      document.getElementById("serveby").textContent = "--:--";
+      renderRescue(); renderOffers(); renderImpact(null); drawMap();
+    }
+
+    function onEvent(e) {
+      if (e.kind === "reset") return resetView();
+      if (e.kind === "trace") addTrace(e);
+      else if (e.kind === "warning") addTrace({ ...e, actor: "CODE", step: "warning", summary: e.text, status: "warn" });
+      else if (e.kind === "rescue") {
+        if (!rescue || rescue.id !== e.rescue.id) { offers.clear(); renderImpact(null); }
+        rescue = e.rescue; renderRescue(); drawMap();
+        if (rescue.impact) renderImpact(rescue.impact);
+      } else if (e.kind === "offer") { offers.set(e.offer.id, e.offer); renderOffers(); drawMap(); }
+      else if (e.kind === "impact") renderImpact(e.impact);
+    }
+
+    async function boot() {
+      const [cfg, state] = await Promise.all([api("/api/config"), api("/api/state")]);
+      world = state;
+      document.getElementById("mode").textContent =
+        `${cfg.agent_mode === "bedrock" ? "Bedrock · " + cfg.model : "mock planner (no AWS)"} · store ${cfg.store} · routing ${cfg.routing} · Dubai ${cfg.now}`;
+      const base = cfg.public_base_url || location.origin;
+      const judgeUrl = `${base}/coordinator?r=r3`;
+      document.getElementById("judge-link").href = judgeUrl;
+      document.getElementById("qrcode").src = `/api/qr.svg?url=${encodeURIComponent(judgeUrl)}`;
+      initMap(); drawMap();
+      listen("ops", onEvent);
+      timerHandle = setInterval(tickTimer, 500);
+    }
+
+    document.getElementById("reset").addEventListener("click", async () => {
+      await postJSON("/api/reset", {});
+    });
+
+    boot();
+  </script>
+</body>
+</html>
