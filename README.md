@@ -1,5 +1,9 @@
 # Plenty
 
+## Design references
+
+The [visual gallery](gallery.html) contains eleven concept boards. See the [brand guidelines](BRAND.md), [interface guidelines](DESIGN.md), and [screen map](SCREEN_MAP.md) for the proposed Plentli design direction. These are reference assets; the current app and this README use the name Plenty.
+
 **Agentic food rescue for Dubai kitchens.** A kitchen sends one message about leftover food. An AI agent works out what the food is and how long it stays safe, finds charities that can use it tonight, and books a van to get it there in time. Code enforces every food-safety rule.
 
 Built at the AWS Summit hackathon (Idea 2, "WasteNot").

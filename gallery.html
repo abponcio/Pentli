@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Plentli · Design references</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#172d25;background:#f6f7f2}*{box-sizing:border-box}body{margin:0}header{background:#163d32;color:#fff;padding:28px max(24px,calc((100vw - 1320px)/2))}h1{margin:0;font-size:36px;letter-spacing:-.04em}header p{margin:6px 0 0;color:#d9ef91}main{max-width:1320px;margin:auto;padding:28px 24px 80px}.intro{line-height:1.6;max-width:78ch}.links{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0 30px}.links a{color:#163d32;border:1px solid #21634b;border-radius:10px;padding:10px 15px;text-decoration:none;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:24px}.card{background:#fff;border:1px solid #dce5de;border-radius:16px;overflow:hidden}.card a{display:block;color:inherit;text-decoration:none}.card img{display:block;width:100%;height:auto}.caption{padding:16px 20px 20px}h2{font-size:20px;margin:0 0 6px}.caption p{margin:0;color:#56655d;line-height:1.4}.tag{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#21634b;font-weight:800;margin-bottom:8px}footer{max-width:1320px;margin:auto;padding:0 24px 40px;color:#56655d;font-size:14px}
+  </style>
+</head>
+<body>
+<header><h1>Plentli</h1><p>Good food. More people.</p></header>
+<main>
+  <p class="intro">Eleven visual boards cover the donor, operations and recipient journeys. Click an image for the full-resolution PNG. The Markdown guides define the behavior and copy where illustrative images vary.</p>
+  <nav class="links"><a href="BRAND.md">Brand guidelines</a><a href="DESIGN.md">Design guidelines</a><a href="SCREEN_MAP.md">Screen map</a></nav>
+  <div class="grid" id="gallery"></div>
+</main>
+<footer>Visual concepts · Demo data and simulated messaging · The illustrated safety deadline is a demo rule.</footer>
+<script>
+const boards=[
+ ['01-live-rescue','Live rescue','Confirmed driver, route, checks and activity','Operations'],
+ ['02-donor-chat','Donor chat','Share surplus and receive pickup confirmation','Donor'],
+ ['03-recipient-flow','Recipient flow','Offer, accepted and received','Recipient'],
+ ['04-replanning','Re-planning','A decline changes the allocation','Operations'],
+ ['05-impact','Impact and records','Confirmed handovers, with uncalculated estimates','Operations'],
+ ['06-arabic-rtl','Arabic RTL','Donor and recipient layouts','Localization'],
+ ['07-intake-clarification','Intake and clarification','Empty state and one missing fact','Donor'],
+ ['08-recipient-exceptions','Recipient exceptions','Declined, expired and arrival confirmation','Recipient'],
+ ['09-awaiting-offers','Awaiting offers','Pending matches and illustrative QR','Operations'],
+ ['10-dispatch-blocked','Dispatch blocked','Safety gate refusal with next step','Operations'],
+ ['11-driver-handover','Driver message and handover','Notification preview and receipt record','Detail views']
+];
+document.querySelector('#gallery').innerHTML=boards.map(([file,title,description,tag])=>`<article class="card"><a href="assets/${file}.png"><img src="assets/${file}.png" alt="${title} interface reference" loading="lazy"><div class="caption"><div class="tag">${tag}</div><h2>${title}</h2><p>${description}</p></div></a></article>`).join('');
+</script>
+</body>
+</html>
