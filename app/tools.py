@@ -486,17 +486,25 @@ def mark_stop(rescue_id: str, stop_id: str, action: str) -> dict:
             else:
                 events.trace(rescue_id, "arrival_check", "CODE", f"{stop['name']}: arrived {clock.fmt(now)}, inside safe window (serve by {clock.fmt(safe_until)}).")
                 events.emit("arrived", rescue_id, [f"recipient:{stop_id}"], stop=stop)
+                recipient = store.get("recipient", stop_id) or {}
+                if recipient.get("responder", "human") != "human":
+                    # Partners without someone on the Plentli screen confirm the handover through their own system.
+                    _confirm_receipt(rescue_id, stop, now)
         elif action == "received":
-            stop["status"] = "received"
-            stop["received_at"] = clock.fmt(now)
-            events.trace(rescue_id, "handover", "CODE", f"{stop['name']} confirmed receipt of {stop['portions']} portions.")
-            events.emit("received", rescue_id, [f"recipient:{stop_id}"], stop=stop)
+            _confirm_receipt(rescue_id, stop, now)
         store.update("rescue", rescue_id, route=route)
     _ops_update(rescue_id)
     events.emit("job", rescue_id, [f"driver:{route['driver_id']}"], route=route)
     if all(s["status"] == "received" for s in route["stops"]):
         record_impact(rescue_id)
     return {"ok": True, "route": route}
+
+
+def _confirm_receipt(rescue_id: str, stop: dict, now: datetime) -> None:
+    stop["status"] = "received"
+    stop["received_at"] = clock.fmt(now)
+    events.trace(rescue_id, "handover", "CODE", f"{stop['name']} confirmed receipt of {stop['portions']} portions.")
+    events.emit("received", rescue_id, [f"recipient:{stop['id']}"], stop=stop)
 
 
 def record_impact(rescue_id: str) -> dict:
