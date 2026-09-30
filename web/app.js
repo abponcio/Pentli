@@ -2,8 +2,8 @@
 
 const STRINGS = {
   en: {
-    tagline: "Good food. More people.", lang_label: "EN / العربية", demo: "Demo",
-    footer: "Demo data · Simulated messaging", demo_rule: "Demo rule",
+    tagline: "Good food. More people.", lang_label: "EN / العربية",
+    footer: "Plentli · Dubai",
     nav_chat: "Donor chat", nav_live: "Live rescue", nav_impact: "Impact",
     meals: "meals", portions: "portions", serve_by: "Serve by", eta: "ETA", pickup: "Pickup",
     contains: "Contains", no_allergens: "No declared allergens", halal: "Halal", donor_declared: "Donor declared",
@@ -11,8 +11,8 @@ const STRINGS = {
     from_kitchen: "From HelloChef kitchen", rescue: "Rescue",
   },
   ar: {
-    tagline: "Good food. More people.", lang_label: "EN / العربية", demo: "تجريبي",
-    footer: "بيانات تجريبية · رسائل محاكاة", demo_rule: "قاعدة تجريبية",
+    tagline: "Good food. More people.", lang_label: "EN / العربية",
+    footer: "Plentli · دبي",
     nav_chat: "محادثة المتبرع", nav_live: "الإنقاذ المباشر", nav_impact: "الأثر",
     meals: "وجبة", portions: "وجبة", serve_by: "التقديم قبل", eta: "الوصول", pickup: "الاستلام",
     contains: "يحتوي على", no_allergens: "لا توجد مسببات حساسية معلنة", halal: "حلال", donor_declared: "بحسب المتبرع",
@@ -152,7 +152,7 @@ function brandMark() {
   return svg;
 }
 
-// Header: wordmark, optional section nav, language toggle, demo status.
+// Header: wordmark, optional section nav, language toggle.
 function mountHeader({ nav = null, tagline = true } = {}) {
   const brand = el("a", { class: "brand", href: "/", "aria-label": "Plentli home" }, brandMark(),
     el("span", {}, el("span", { class: "word" }, "Plentli"), tagline ? el("span", { class: "tag" }, "Good food. More people.") : null));
@@ -161,7 +161,7 @@ function mountHeader({ nav = null, tagline = true } = {}) {
       .map(([id, href, ic, key]) => el("a", { href, "data-nav": id, "aria-current": nav === id ? "page" : null }, icon(ic, 18), el("span", { "data-t": key }, t(key))))) : null;
   const lang = el("button", { class: "lang-toggle", type: "button", "aria-label": "Switch language" }, icon("globe", 20), el("span", { dir: "ltr" }, "EN / العربية"));
   lang.addEventListener("click", toggleLang);
-  const header = el("header", { class: "topbar" }, brand, links, el("div", { class: "spacer" }), lang, el("span", { class: "demo-pill", "data-t": "demo" }, t("demo")));
+  const header = el("header", { class: "topbar" }, brand, links, el("div", { class: "spacer" }), lang);
   document.body.prepend(header);
   return header;
 }

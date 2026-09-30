@@ -130,7 +130,7 @@
       awaiting: "Awaiting acceptance", accepted: "Accepted", declined: "Declined", no_reply: "No reply", delivered: "Delivered", received: "Received",
       excluded: (name) => `${name} excluded`, placed_line: (a, b) => `${a} of ${b} portions placed`, none_left: "No meals left unmatched",
       pending_confirm: "Pending recipient confirmation", all_confirmed: "All recipients confirmed",
-      cap_candidates: "Candidate locations", cap_route: "Route preview", cap_proposed: "Proposed route", demo_locations: "Demo locations", not_dispatched: "Not dispatched",
+      cap_candidates: "Candidate locations", cap_route: "Route preview", cap_proposed: "Proposed route", demo_locations: "Dubai", not_dispatched: "Not dispatched",
       driver_pending: "Driver selection pending", driver_pending_hint: "We'll assign a driver once a recipient confirms.", confirmed: "Confirmed", pickup_at: "Pickup",
       try_view: "Try the recipient view", try_hint: "Scan to open the Family shelter offer on your phone.", open_offer: "Open recipient offer",
       activity: "Activity", live: "Live", no_activity: "Activity appears as the agent works.",
@@ -138,7 +138,7 @@
       declined_banner: (name) => `${name} declined. Updating the plan.`, paused_banner: "Dispatch paused. No messages sent.",
       expired_banner: "This food is past its safe window. The kitchen has been told not to send it.", failed_banner: "The rescue stopped. Open the tool details to see why.",
       unsafe_banner: "A delivery arrived after the safe window. The recipient was told not to serve it.",
-      reset: "Reset demo", reset_done: "Demo reset",
+      reset: "Start over", reset_done: "Cleared",
       // Impact
       impact_wait_h: "Impact appears after receipt.", impact_wait_sub: "Meals count only once recipients confirm the handover.",
       impact_sub_done: "All handovers confirmed", meals_received: "Meals received", orgs: "Recipient organisations", time_to_driver: "Time to driver confirmation",
@@ -163,7 +163,7 @@
       awaiting: "بانتظار القبول", accepted: "مقبول", declined: "مرفوض", no_reply: "لا رد", delivered: "تم التوصيل", received: "تم الاستلام",
       excluded: (name) => `استُبعدت ${name}`, placed_line: (a, b) => `تم توزيع ${a} من ${b} وجبة`, none_left: "لم تبقَ وجبات دون توزيع",
       pending_confirm: "بانتظار تأكيد الجهات", all_confirmed: "أكدت كل الجهات",
-      cap_candidates: "المواقع المرشحة", cap_route: "معاينة المسار", cap_proposed: "المسار المقترح", demo_locations: "مواقع تجريبية", not_dispatched: "لم يُرسل",
+      cap_candidates: "المواقع المرشحة", cap_route: "معاينة المسار", cap_proposed: "المسار المقترح", demo_locations: "دبي", not_dispatched: "لم يُرسل",
       driver_pending: "اختيار السائق معلق", driver_pending_hint: "سنعيّن سائقاً بعد أن تؤكد جهة مستفيدة.", confirmed: "مؤكد", pickup_at: "الاستلام",
       try_view: "جرّب واجهة الجهة المستفيدة", try_hint: "امسح الرمز لفتح عرض مأوى العائلات على هاتفك.", open_offer: "فتح عرض الجهة",
       activity: "النشاط", live: "مباشر", no_activity: "يظهر النشاط أثناء عمل الوكيل.",
@@ -171,7 +171,7 @@
       declined_banner: (name) => `رفضت ${name}. نحدّث الخطة.`, paused_banner: "توقف الإرسال. لم تُرسل أي رسائل.",
       expired_banner: "انتهت فترة الأمان لهذا الطعام. تم إبلاغ المطبخ بعدم إرساله.", failed_banner: "توقفت عملية الإنقاذ. افتح تفاصيل الأدوات لمعرفة السبب.",
       unsafe_banner: "وصلت توصيلة بعد انتهاء فترة الأمان. تم إبلاغ الجهة بعدم تقديمها.",
-      reset: "إعادة ضبط العرض", reset_done: "تمت إعادة الضبط",
+      reset: "البدء من جديد", reset_done: "تم المسح",
       impact_wait_h: "يظهر الأثر بعد الاستلام.", impact_wait_sub: "تُحتسب الوجبات فقط بعد أن تؤكد الجهات الاستلام.",
       impact_sub_done: "تم تأكيد كل عمليات التسليم", meals_received: "وجبة مستلمة", orgs: "جهات مستفيدة", time_to_driver: "الوقت حتى تأكيد السائق",
       handover_records: "سجلات التسليم", h_recipient: "الجهة", h_meals: "الوجبات", h_received: "وقت الاستلام", h_status: "الحالة",
@@ -340,7 +340,7 @@
         f ? el("div", {}, el("span", { class: "big" }, dispatched() || placed() ? placed() : total), " ", el("span", { class: "muted" }, dispatched() || placed() ? t("allocated") : t("available")))
           : el("span", { class: "muted" }, rescue ? t("reading") : "—")));
       cells.push(el("div", { class: "cell" }, el("span", { class: "bubble-icon" }, icon("clock", 22)),
-        rescue && rescue.safety ? el("div", {}, `${t("serve_by")} `, el("span", { class: "big" }, ltr(hhmm(rescue.safety.safe_until))), " ", el("span", { class: "demo-rule" }, t("demo_rule")))
+        rescue && rescue.safety ? el("div", {}, `${t("serve_by")} `, el("span", { class: "big" }, ltr(hhmm(rescue.safety.safe_until))))
           : el("span", { class: "muted" }, t("serve_pending"))));
       let st = ["ellipsis", t("waiting_replies"), ""];
       if (!rescue || !rescue.safety) st = ["ellipsis", "—", ""];
@@ -475,7 +475,7 @@
                 el("td", {}, s.status === "received" && !s.unsafe ? el("span", { class: "chip" }, icon("circle-check", 16), t("confirmed")) : el("span", { class: "chip amber" }, icon("triangle-alert", 16), s.unsafe ? t("expired") : t("awaiting")))))))),
             el("div", { class: "row", style: "margin-block-start:12px" }, el("span", { class: "bubble-icon big" }, icon("utensils", 36)),
               el("div", { class: "grow" }, el("div", { style: "display:flex;gap:12px;flex-wrap:wrap;align-items:center" }, el("h3", { style: "font-size:1.3rem" }, cap(dishName(f))), el("span", { class: "chip amber" }, icon("triangle-alert", 16), cap(allergenText(f.allergens)))),
-                el("span", { class: "muted" }, `${t("serve_by")} `, ltr(imp.safe_until), ` · ${t("demo_rule")}`))),
+                el("span", { class: "muted" }, `${t("serve_by")} `, ltr(imp.safe_until)))),
             el("p", { class: "muted small" }, t("recorded_after"))),
           el("div", { class: "stack" },
             el("div", { class: "card" }, el("h2", {}, t("env")),

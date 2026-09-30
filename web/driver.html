@@ -32,14 +32,14 @@
   <script src="/static/app.js"></script>
   <script>
     addStrings({
-      driver_message: "Driver message", simulated: "Simulated notification", idle: "No pickup yet", idle_hint: "New pickups appear here as a message.",
+      driver_message: "Driver message", idle: "No pickup yet", idle_hint: "New pickups appear here as a message.",
       open_map: "Open route map", mark_picked: "Mark picked up", mark_delivered: (name) => `Mark delivered at ${name}`,
-      all_done: "All drops delivered. Thank you!", channel: "Message channel simulated", picked: "Picked up", delivered: "Delivered",
+      all_done: "All drops delivered. Thank you!", picked: "Picked up", delivered: "Delivered",
       new_job: "New pickup",
     }, {
-      driver_message: "رسالة السائق", simulated: "إشعار محاكى", idle: "لا توجد عملية استلام بعد", idle_hint: "ستظهر عمليات الاستلام الجديدة هنا كرسالة.",
+      driver_message: "رسالة السائق", idle: "لا توجد عملية استلام بعد", idle_hint: "ستظهر عمليات الاستلام الجديدة هنا كرسالة.",
       open_map: "فتح خريطة المسار", mark_picked: "تأكيد الاستلام من المطبخ", mark_delivered: (name) => `تأكيد التوصيل إلى ${name}`,
-      all_done: "تم كل التوصيلات. شكراً لك!", channel: "قناة الرسائل محاكاة", picked: "تم الاستلام", delivered: "تم التوصيل",
+      all_done: "تم كل التوصيلات. شكراً لك!", picked: "تم الاستلام", delivered: "تم التوصيل",
       new_job: "عملية استلام جديدة",
     });
     const tf = (key, ...args) => { const v = t(key); return typeof v === "function" ? v(...args) : v; };
@@ -56,9 +56,7 @@
     }
 
     function render() {
-      const screen = el("div", { class: "screen" },
-        el("h1", {}, t("driver_message")),
-        el("span", { class: "chip grey sim" }, icon("message-circle", 16), t("simulated")));
+      const screen = el("div", { class: "screen" }, el("h1", {}, t("driver_message")));
       if (!job) {
         screen.append(el("div", { class: "card", style: "text-align:center;display:grid;gap:8px;justify-items:center;padding-block:32px" },
           el("span", { class: "bubble-icon big" }, icon("truck", 40)), el("h2", {}, t("idle")), el("p", { class: "muted" }, t("idle_hint")),
@@ -82,11 +80,9 @@
               el("div", { class: "grow" }, el("strong", {}, localName(s)), el("div", { class: "muted" },
                 done ? [`${t("delivered")} `, ltr(s.delivered_at || "")] : [`${t("eta")} `, ltr(s.eta_hhmm)], ` · ${s.portions} ${t("meals")}`)));
           })),
-          job.facts ? el("div", { class: "warn-strip" }, icon("triangle-alert", 20), el("span", {}, cap(allergenText(job.facts.allergens)), " · ", `${t("serve_by")} `, ltr(job.facts.safe_until)),
-            el("span", { class: "demo-rule" }, t("demo_rule"))) : null,
+          job.facts ? el("div", { class: "warn-strip" }, icon("triangle-alert", 20), el("span", {}, cap(allergenText(job.facts.allergens)), " · ", `${t("serve_by")} `, ltr(job.facts.safe_until))) : null,
           el("a", { class: "btn primary block", href: mapsUrl(r), target: "_blank", rel: "noopener" }, icon("map", 22), el("span", { class: "grow" }, t("open_map")), icon(AR() ? "arrow-left" : "chevron-right", 20)),
-          action,
-          el("p", { class: "muted small" }, icon("info", 16), " ", t("channel"))));
+          action));
       }
       screen.append(el("p", { class: "hint" }, t("footer")));
       main.replaceChildren(screen);

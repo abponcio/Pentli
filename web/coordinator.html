@@ -45,7 +45,7 @@
   <script src="/static/app.js"></script>
   <script>
     addStrings({
-      pick_org: "Which organisation are you?", pick_hint: "Demo organisations. Pick one to see its offers.",
+      pick_org: "Which organisation are you?", pick_hint: "Pick your organisation to see its offers.",
       no_offer: "No offers right now", no_offer_hint: "Keep this page open. New food offers appear here.",
       meals_for: (n) => `${n} meals for your community`, arrival: "Arrival", about: "about",
       review: "Review allergens before accepting.", expires_in: "Offer expires in",
@@ -65,7 +65,7 @@
       unsafe: "Do not serve this food",
       new_offer: "New food offer", confirmed: "Delivery confirmed", arrived_alert: "Your delivery is here",
     }, {
-      pick_org: "ما هي جهتك؟", pick_hint: "جهات تجريبية. اختر جهة لرؤية عروضها.",
+      pick_org: "ما هي جهتك؟", pick_hint: "اختر جهتك لرؤية عروضها.",
       no_offer: "لا توجد عروض حالياً", no_offer_hint: "أبقِ هذه الصفحة مفتوحة. ستظهر عروض الطعام الجديدة هنا.",
       meals_for: (n) => `${n} وجبة لمجتمعكم`, arrival: "الوصول", about: "حوالي",
       review: "راجع مسببات الحساسية قبل القبول.", expires_in: "ينتهي العرض خلال",
@@ -147,7 +147,7 @@
         el("div", {}, el("span", { class: "chip amber" }, icon("triangle-alert", 18), cap(allergenText(o.allergens)))),
         el("div", {},
           row("clock", t("arrival"), el("span", { class: "value" }, ltr(o.eta))),
-          row("clock", t("serve_by"), el("span", { class: "value" }, ltr(o.safe_until), " ", el("span", { class: "demo-rule" }, t("demo_rule")))),
+          row("clock", t("serve_by"), el("span", { class: "value" }, ltr(o.safe_until))),
           row("leaf", t("halal"), el("span", { class: "muted small" }, t("donor_declared")))),
         el("p", { class: "muted small" }, t("review")),
         el("div", { class: "expiry", "aria-live": "off" }, icon("clock", 22), el("span", { class: "grow" }, t("expires_in")), el("span", { class: "count", id: "count" }, fmtCount(left))),
@@ -192,7 +192,7 @@
         el("h1", {}, t("delivery_here")),
         el("span", { class: "chip" }, icon("circle-check", 18), `${t("arrived_at")} `, ltr(s.delivered_at || "")),
         foodCard(o, portions, [el("span", { class: "chip amber" }, icon("triangle-alert", 16), cap(allergenText(o.allergens))),
-          el("span", { class: "muted small" }, `${t("serve_by")} `, ltr(o.safe_until), ` · ${t("demo_rule")}`)])),
+          el("span", { class: "muted small" }, `${t("serve_by")} `, ltr(o.safe_until))])),
         el("h2", {}, tf("received_all", portions))];
       if (cur.issue) out.push(el("div", { class: "notice amber", role: "status" }, icon("info", 22), el("span", { class: "grow" }, t("issue_noted"))));
       out.push(el("button", { class: "btn primary block", type: "button", onclick: confirmReceived }, tf("confirm_n", portions)),
