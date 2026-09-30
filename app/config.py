@@ -60,11 +60,13 @@ DEMO_CLOCK = _env("DEMO_CLOCK", "")  # e.g. "19:40" pins the Dubai clock for a r
 TIMEZONE = _env("TIMEZONE", "Asia/Dubai")
 
 # Impact.
-# Food weight and CO2e are shown as "Not calculated" until these factors are measured and cited.
-IMPACT_FACTORS_VERIFIED = _env("IMPACT_FACTORS_VERIFIED", "false").lower() in ("1", "true", "yes")
-KG_PER_PORTION = float(_env("KG_PER_PORTION", "0.35"))
+# Published factors, shown as estimates with their source. Set IMPACT_FACTORS_VERIFIED=false to show
+# "Not calculated" instead. WRAP: https://www.wrap.ngo/system/files/2020-09/WRAP-Expressing%20redistributed%20food%20surplus%20as%20meal%20equivalents%20(WRAP%20guidance).pdf
+# FAO: https://www.fao.org/4/i3347e/i3347e.pdf (3.3 Gt CO2e / 1.3 Gt food wasted = 2.54 kg CO2e per kg).
+IMPACT_FACTORS_VERIFIED = _env("IMPACT_FACTORS_VERIFIED", "true").lower() in ("1", "true", "yes")
+KG_PER_PORTION = float(_env("KG_PER_PORTION", "0.42"))
 CO2E_PER_KG_FOOD = float(_env("CO2E_PER_KG_FOOD", "2.5"))
-CO2E_SOURCE = _env("CO2E_SOURCE", "placeholder factor: replace with a cited source before the pitch")
+CO2E_SOURCE = _env("CO2E_SOURCE", "Estimate: 420 g per meal (WRAP meal-equivalent guidance); 2.5 kg CO2e per kg of food not wasted (FAO Food Wastage Footprint, 2013: 3.3 Gt CO2e for 1.3 Gt of food).")
 
 PUBLIC_BASE_URL = _env("PUBLIC_BASE_URL", "")
 

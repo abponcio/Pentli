@@ -19,9 +19,9 @@ Plentli turns that into one message. In our demo, 50 portions of chicken biryani
 - It never sends nut-containing food to the nut-free care home. The allergen check is code, not a prompt.
 - When a shelter declines, it re-plans on its own and offers the portions to the next partner.
 - It refuses food that is past its safe window, even if the agent would like to send it.
-- Every handover is recorded: meals received and organisations served. Weight and CO2e show as "Not calculated" until a verified factor is set.
+- Every handover is recorded: meals received, organisations served, and estimated food weight and CO2e avoided, with the sources shown.
 
-> Replace the **[XX]** figures with Mohsen's real numbers before submitting. Weight and CO2e stay "Not calculated" unless `IMPACT_FACTORS_VERIFIED=true`; set that only once `CO2E_PER_KG_FOOD` is backed by a cited source.
+> Replace the **[XX]** figures with Mohsen's real numbers before submitting. Food weight and CO2e are estimates from published factors: 420 g per meal from [WRAP's meal-equivalent guidance](https://www.wrap.ngo/system/files/2020-09/WRAP-Expressing%20redistributed%20food%20surplus%20as%20meal%20equivalents%20(WRAP%20guidance).pdf), and 2.5 kg CO2e per kg of food not wasted from the [FAO Food Wastage Footprint (2013)](https://www.fao.org/4/i3347e/i3347e.pdf) (3.3 Gt CO2e for 1.3 Gt of food wasted). Swap in HelloChef's measured portion weight when Mohsen has it, or set `IMPACT_FACTORS_VERIFIED=false` to hide them.
 
 ## What you see
 
