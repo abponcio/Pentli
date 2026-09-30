@@ -1,4 +1,4 @@
-"""Plenty web app: the API, the live event stream, and the four screens."""
+"""Plentli web app: the API, the live event stream, and the screens."""
 import asyncio
 import base64
 import json
@@ -14,11 +14,15 @@ from . import agent, clock, config, events, photos, tools
 from .store import seed, store
 
 WEB = Path(__file__).resolve().parent.parent / "web"
-app = FastAPI(title="Plenty", description="Agentic food rescue for Dubai kitchens")
+app = FastAPI(title="Plentli", description="Agentic food rescue for Dubai kitchens")
 app.mount("/static", StaticFiles(directory=WEB), name="static")
 
 
+_next_rescue = [1042]  # rescue ids read PL-1042, PL-1043, ... (reset on every demo reset)
+
+
 def reset_demo() -> None:
+    _next_rescue[0] = 1042
     store.clear()
     events.clear()
     photos.clear()
@@ -110,7 +114,8 @@ async def kitchen_message(donor_id: str = Form("k1"), text: str = Form(""), phot
         store.update("rescue", rescue["id"], replies=rescue.get("replies", []) + [text])
         rescue_id = rescue["id"]
     else:
-        rescue_id = f"R{int(time.time() * 1000) % 10_000_000:07d}"
+        rescue_id = f"PL-{_next_rescue[0]}"
+        _next_rescue[0] += 1
         store.put("rescue", {
             "id": rescue_id, "donor_id": donor_id, "note": text, "replies": [], "status": "received",
             "created_at": clock.now().isoformat(), "created_ts": time.time(), "tool_calls": 0,

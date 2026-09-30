@@ -1,4 +1,4 @@
-# Deploying Plenty (handoff notes)
+# Deploying Plentli (handoff notes)
 
 Everything runs locally with no AWS account (`AGENT_MODE=mock`). These steps switch on the real AWS services one at a time. Each switch is a single environment variable, and each has a local fallback, so you can deploy the app first and turn services on as access comes through.
 

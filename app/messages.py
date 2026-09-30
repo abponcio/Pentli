@@ -89,7 +89,12 @@ def unsafe_on_arrival(safe_until: str) -> dict:
 
 
 def impact_note(i: dict) -> dict:
+    if i.get("kg") is None:
+        return {
+            "en": f"All handovers confirmed: {i['meals']} meals received by {i['recipients']} organisations.",
+            "ar": f"تم تأكيد كل عمليات التسليم: استلمت {i['recipients']} جهات {i['meals']} وجبة.",
+        }
     return {
-        "en": f"Tonight: {i['meals']} meals rescued, {i['kg']} kg of food and about {i['co2e_kg']} kg CO2e kept out of landfill.",
-        "ar": f"الليلة: تم إنقاذ {i['meals']} وجبة، و{i['kg']} كغ من الطعام، وتجنب حوالي {i['co2e_kg']} كغ من مكافئ ثاني أكسيد الكربون.",
+        "en": f"All handovers confirmed: {i['meals']} meals received, about {i['kg']} kg of food and {i['co2e_kg']} kg CO2e.",
+        "ar": f"تم تأكيد كل عمليات التسليم: {i['meals']} وجبة، حوالي {i['kg']} كغ من الطعام و{i['co2e_kg']} كغ من مكافئ ثاني أكسيد الكربون.",
     }

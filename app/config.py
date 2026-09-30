@@ -60,6 +60,8 @@ DEMO_CLOCK = _env("DEMO_CLOCK", "")  # e.g. "19:40" pins the Dubai clock for a r
 TIMEZONE = _env("TIMEZONE", "Asia/Dubai")
 
 # Impact.
+# Food weight and CO2e are shown as "Not calculated" until these factors are measured and cited.
+IMPACT_FACTORS_VERIFIED = _env("IMPACT_FACTORS_VERIFIED", "false").lower() in ("1", "true", "yes")
 KG_PER_PORTION = float(_env("KG_PER_PORTION", "0.35"))
 CO2E_PER_KG_FOOD = float(_env("CO2E_PER_KG_FOOD", "2.5"))
 CO2E_SOURCE = _env("CO2E_SOURCE", "placeholder factor: replace with a cited source before the pitch")

@@ -3,56 +3,103 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f7a4d">
-  <title>Plenty · Kitchen</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>Plentli · Donor chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/app.css">
+  <style>
+    body { display: flex; flex-direction: column; }
+    .shell { flex: 1; display: flex; flex-direction: column; inline-size: 100%; max-inline-size: 720px; margin: 0 auto; background: var(--white); border-inline: 1px solid var(--border); }
+    .chat-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-block-end: 1px solid var(--border); }
+    .chat-head .avatar { inline-size: 48px; block-size: 48px; border-radius: 50%; background: var(--forest); color: var(--white); display: grid; place-items: center; box-shadow: 0 0 0 6px var(--sage); margin-inline: 6px; }
+    .chat-head strong { font-family: var(--font-display); font-size: 1.1rem; display: block; }
+    .chat-head .live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.9rem; }
+    .chat-head .live::before { content: ""; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--green); }
+    .messages { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--ivory); }
+    .msg { max-inline-size: 86%; padding: 10px 14px; border-radius: 14px; background: var(--white); border: 1px solid var(--border); overflow-wrap: anywhere; }
+    .msg.me { align-self: flex-end; background: var(--bubble-me); border-color: #d3e4cc; border-end-end-radius: 4px; }
+    .msg.them { align-self: flex-start; border-end-start-radius: 4px; }
+    .msg img { display: block; inline-size: 100%; max-block-size: 220px; object-fit: cover; border-radius: 10px; margin-block-end: 8px; }
+    .msg .text { white-space: pre-wrap; }
+    .msg .meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--muted); margin-block-start: 4px; }
+    .msg .meta .icon { color: var(--green); }
+    .result { align-self: stretch; max-inline-size: 100%; background: var(--white); border: 1px solid var(--border); border-inline-start: 5px solid var(--green); border-radius: 14px; padding: 16px; }
+    .result .head { display: flex; align-items: center; gap: 12px; }
+    .result .head h3 { flex: 1; font-size: 1.15rem; }
+    .result .head time { color: var(--muted); font-size: 0.85rem; }
+    .result .big { font-family: var(--font-display); font-size: 2rem; font-weight: 800; line-height: 1; }
+    .result .route-row { display: flex; align-items: center; gap: 10px; }
+    .typing { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.92rem; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; }
+    .typing .dots { display: inline-flex; gap: 3px; }
+    .typing .dots i { inline-size: 6px; block-size: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+    .typing .dots i:nth-child(2) { animation-delay: 0.2s; } .typing .dots i:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 50% { opacity: 0.25; } }
+    @media (prefers-reduced-motion: reduce) { .typing .dots i { animation: none; } }
+    .info-line { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.9rem; }
+    .composer { position: sticky; inset-block-end: 0; background: var(--white); border-block-start: 1px solid var(--border); padding: 10px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-block-end: 8px; }
+    .suggest { flex: none; min-block-size: 36px; padding: 6px 12px; border-radius: 18px; border: 1px dashed var(--border); background: var(--ivory); cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+    .composer form { display: flex; gap: 8px; align-items: flex-end; }
+    .composer textarea { flex: 1; min-inline-size: 0; resize: none; min-block-size: 48px; max-block-size: 140px; padding: 12px 16px; border-radius: 24px; border: 1px solid var(--border); background: var(--white); }
+    .round { inline-size: 48px; block-size: 48px; flex: none; border-radius: 50%; border: 1px solid var(--border); background: var(--ivory); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+    .round.send { background: var(--forest); color: var(--white); border-color: transparent; }
+    .round.recording { background: var(--amber-ink); color: var(--white); border-color: transparent; }
+    [dir="rtl"] .round.send .icon { transform: scaleX(-1); }
+    .preview { display: flex; align-items: center; gap: 8px; padding-block-end: 8px; }
+    .preview img { block-size: 56px; border-radius: 8px; }
+    .composer .footnote { padding: 6px 0 0; font-size: 0.78rem; }
+  </style>
 </head>
 <body>
-  <div class="chat">
-    <header class="app-bar">
-      <div class="avatar" aria-hidden="true">P</div>
+  <div class="shell">
+    <div class="chat-head">
+      <div class="avatar" id="avatar"></div>
       <div>
-        <div class="title" data-t="plenty">Plenty</div>
-        <div class="sub" id="sub" data-t="online">rescue agent, online</div>
+        <strong data-t="assistant">Your rescue assistant</strong>
+        <span class="live" data-t="demo_chat">Demo chat</span>
       </div>
-      <div class="spacer"></div>
-      <button class="lang-toggle" type="button" data-t="switch">عربي</button>
-    </header>
-
-    <main class="messages" id="messages" aria-live="polite">
-      <div class="empty" id="intro">
-        <strong>HelloChef Kitchen, Al Quoz</strong><br>
-        <span class="muted" data-t="kitchen_intro">Tell Plenty what's left over. A photo and one line is enough.</span>
-      </div>
-    </main>
-
+    </div>
+    <main class="messages" id="messages" aria-live="polite"></main>
     <div class="composer">
-      <div class="chips" id="chips">
-        <button class="chip" type="button" data-t="try1"></button>
-        <button class="chip" type="button" data-t="try2"></button>
-        <button class="chip" type="button" data-t="try3"></button>
-      </div>
+      <div class="chips" id="chips"></div>
       <div class="preview hidden" id="preview">
         <img id="preview-img" alt="">
-        <button class="btn" type="button" id="clear-photo">✕</button>
+        <button class="linkbtn" type="button" id="clear-photo" data-t="remove_photo">Remove photo</button>
       </div>
-      <form class="composer-inner" id="form">
-        <label class="icon-btn" data-t-label="photo" aria-label="Add photo">
-          📷
-          <input type="file" id="photo" accept="image/*" capture="environment" class="hidden">
+      <form id="form">
+        <label class="round" id="photo-btn" data-t-label="add_photo" aria-label="Add a photo">
+          <input type="file" id="photo" accept="image/*" capture="environment" class="sr-only">
         </label>
-        <textarea id="text" rows="1" data-t-placeholder="placeholder" placeholder="Describe the surplus"></textarea>
-        <button class="icon-btn" type="button" id="mic" data-t-label="mic" aria-label="Voice note">🎤</button>
-        <button class="icon-btn send" type="submit" data-t-label="send" aria-label="Send">➤</button>
+        <textarea id="text" rows="1" data-t-placeholder="placeholder" placeholder="Tell us what is left"></textarea>
+        <button class="round" type="button" id="mic" data-t-label="voice" aria-label="Voice note"></button>
+        <button class="round send" type="submit" id="send" data-t-label="send" aria-label="Send"></button>
       </form>
+      <div class="footnote" data-t="footer">Demo data · Simulated messaging</div>
     </div>
   </div>
   <div class="toast" id="toast" role="status" hidden></div>
 
+  <script src="/static/icons.js"></script>
   <script src="/static/app.js"></script>
   <script>
-    Object.assign(STRINGS.en, { kitchen_intro: "Tell Plenty what's left over. A photo and one line is enough." });
-    Object.assign(STRINGS.ar, { kitchen_intro: "أخبر بلنتي بما تبقى من طعام. تكفي صورة وسطر واحد." });
+    addStrings({
+      assistant: "Your rescue assistant", demo_chat: "Demo chat", greeting: "What can we share today?",
+      placeholder: "Tell us what is left", add_photo: "Add a photo", remove_photo: "Remove photo", voice: "Voice note", send: "Send",
+      listening: "Listening…", reading: "Reading your message…", finding: "Finding recipients…", dispatching: "Booking a driver…",
+      got_it: (n) => `Got it. Finding homes for ${n} meals.`, understood: "Surplus understood",
+      pickup_confirmed: "Pickup confirmed", place_to_go: "Your meals have a place to go.", impact_after: "Impact updates after receipt.",
+      handovers_done: "Handovers confirmed", not_sent: "Not sent",
+      try1: "50 chicken biryani, has cashews, cooked at 6", try2: "عندنا خمسين وجبة برياني دجاج، فيها كاجو، مطبوخة الساعة ٦", try3: "30 trays of pasta with cheese",
+    }, {
+      assistant: "مساعد الإنقاذ", demo_chat: "محادثة تجريبية", greeting: "ماذا يمكننا أن نشارك اليوم؟",
+      placeholder: "أخبرنا بما تبقى", add_photo: "إضافة صورة", remove_photo: "إزالة الصورة", voice: "رسالة صوتية", send: "إرسال",
+      listening: "جارٍ الاستماع…", reading: "نقرأ رسالتك…", finding: "نبحث عن جهات مستفيدة…", dispatching: "نحجز سائقاً…",
+      got_it: (n) => `تم. نبحث عن جهات تستفيد من ${n} وجبة.`, understood: "فهمنا الفائض",
+      pickup_confirmed: "تم تأكيد الاستلام", place_to_go: "وجباتك وجدت من يستفيد منها.", impact_after: "يُحدَّث الأثر بعد الاستلام.",
+      handovers_done: "تم تأكيد التسليم", not_sent: "لم تُرسل",
+    });
+    const tf = (key, ...args) => { const v = t(key); return typeof v === "function" ? v(...args) : v; };
 
     const DONOR = new URLSearchParams(location.search).get("k") || "k1";
     const list = document.getElementById("messages");
@@ -61,47 +108,79 @@
     const photo = document.getElementById("photo");
     const preview = document.getElementById("preview");
     const mic = document.getElementById("mic");
-    let typing = null;
-    const rendered = [];
+    document.getElementById("avatar").append(icon("hand-platter", 24));
+    document.getElementById("photo-btn").prepend(icon("plus", 22));
+    mic.append(icon("mic", 22));
+    document.getElementById("send").append(icon("arrow-right", 22));
 
-    function scrollDown() { window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }
+    const history = [];   // events, re-rendered on language change
+    let typingKey = null;
 
-    function setTyping(on) {
-      if (on && !typing) { typing = el("div", { class: "typing" }, t("thinking")); list.append(typing); scrollDown(); }
-      if (!on && typing) { typing.remove(); typing = null; }
+    function metaTime(e, mine) {
+      return el("span", { class: "meta" }, ltr((e.clock || "").slice(0, 5)), mine ? icon("check", 14) : null);
     }
 
     function renderMessage(e) {
-      document.getElementById("intro")?.remove();
       const mine = e.sender === "kitchen";
-      const bubble = el("div", { class: `bubble ${mine ? "me" : "them"}` });
-      if (e.photo_url) bubble.append(el("img", { src: e.photo_url, alt: "" }));
-      const body = el("span", {}, pickText(e.texts));
-      bubble.append(body, el("span", { class: "meta" }, (e.clock || "").slice(0, 5)));
-      rendered.push({ e, body });
-      if (typing && !mine) typing.before(bubble); else list.append(bubble);
-      scrollDown();
+      const nodes = [];
+      if (mine) {
+        nodes.push(el("div", { class: "msg me" }, e.photo_url ? el("img", { src: e.photo_url, alt: "Photo of the surplus food" }) : null,
+          el("div", { class: "text", dir: "auto" }, pickText(e.texts)), metaTime(e, true)));
+      } else if (e.card && e.card.type === "surplus") {
+        const c = e.card;
+        nodes.push(el("div", { class: "msg them" }, el("div", { class: "text" }, tf("got_it", c.portions)), metaTime(e)));
+        nodes.push(el("section", { class: "result" },
+          el("div", { class: "head" }, el("span", { class: "bubble-icon solid" }, icon("check", 20)), el("h3", {}, t("understood")), ltr((e.clock || "").slice(0, 5))),
+          el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("utensils", 20)), el("div", { class: "grow" }, el("span", { class: "big" }, c.portions), " ", el("span", { class: "muted" }, `${t("portions")} · ${dishName(c)}`))),
+          el("div", { class: "row" }, el("span", { class: "bubble-icon amber" }, icon("triangle-alert", 20)), el("span", { class: "chip amber" }, cap(allergenText(c.allergens)))),
+          el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("clock", 20)), el("div", { class: "grow" }, `${t("serve_by")} `, el("strong", { class: "big" }, ltr(c.safe_until)), " ", el("span", { class: "demo-rule" }, t("demo_rule"))))));
+      } else if (e.card && e.card.type === "pickup") {
+        const c = e.card;
+        nodes.push(el("section", { class: "result" },
+          el("div", { class: "head" }, el("span", { class: "bubble-icon solid" }, icon("check", 20)), el("h3", {}, t("pickup_confirmed")), ltr((e.clock || "").slice(0, 5))),
+          el("div", { class: "row" }, el("span", { class: "bubble-icon big" }, icon("truck", 40)),
+            el("div", { class: "grow" }, el("div", { class: "big" }, ltr(c.pickup_eta)), el("strong", {}, ltr(c.driver)))),
+          c.stops.map((s) => el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("users", 20)),
+            el("div", { class: "grow route-row" }, el("strong", {}, `${s.portions} ${t("meals")}`), icon(AR() ? "arrow-left" : "arrow-right", 16), el("span", {}, localName(s)))))));
+        nodes.push(el("div", { class: "msg them" }, el("div", { class: "text" }, t("place_to_go")), metaTime(e)));
+        nodes.push(el("div", { class: "info-line" }, icon("info", 18), t("impact_after")));
+      } else if (e.card && e.card.type === "impact") {
+        nodes.push(el("section", { class: "result" },
+          el("div", { class: "head" }, el("span", { class: "bubble-icon solid" }, icon("check", 20)), el("h3", {}, t("handovers_done")), ltr((e.clock || "").slice(0, 5))),
+          el("p", { dir: "auto" }, pickText(e.texts))));
+      } else {
+        nodes.push(el("div", { class: "msg them" }, el("div", { class: "text", dir: "auto" }, pickText(e.texts)), metaTime(e)));
+      }
+      return nodes;
     }
 
-    document.addEventListener("langchange", () => {
-      rendered.forEach(({ e, body }) => { body.textContent = pickText(e.texts); });
-      if (typing) typing.textContent = t("thinking");
-    });
+    function render() {
+      list.replaceChildren(el("div", { class: "msg them" }, el("div", { class: "text" }, t("greeting"))));
+      history.forEach((e) => list.append(...renderMessage(e)));
+      if (typingKey) list.append(el("div", { class: "typing" }, el("span", { class: "dots" }, el("i"), el("i"), el("i")), t(typingKey)));
+      window.scrollTo({ top: document.body.scrollHeight });
+    }
+
+    function renderChips() {
+      const chips = document.getElementById("chips");
+      chips.replaceChildren(...["try1", "try2", "try3"].map((k) => el("button", { class: "suggest", type: "button", dir: "auto",
+        onclick: () => { text.value = STRINGS.en[k]; text.focus(); } }, STRINGS.en[k])));
+    }
+
+    document.addEventListener("langchange", () => { render(); renderChips(); });
 
     listen(`kitchen:${DONOR}`, (e) => {
-      if (e.kind === "reset") { list.replaceChildren(); rendered.length = 0; setTyping(false); return; }
+      if (e.kind === "reset") { history.length = 0; typingKey = null; render(); return; }
       if (e.kind !== "message") return;
-      renderMessage(e);
-      if (e.sender === "kitchen") setTyping(true);
-      else {
-        setTyping(false);
-        if (document.visibilityState === "hidden") alertUser("Plenty", pickText(e.texts), e);
-      }
+      history.push(e);
+      if (e.sender === "kitchen") typingKey = "reading";
+      else if (e.card && e.card.type === "surplus") typingKey = "finding";
+      else typingKey = null;
+      render();
+      if (e.sender !== "kitchen") alertUser("Plentli", pickText(e.texts), e);
     });
 
-    document.querySelectorAll(".chip").forEach((chip) => chip.addEventListener("click", () => {
-      text.value = chip.textContent; text.focus();
-    }));
+    render(); renderChips();
 
     photo.addEventListener("change", () => {
       const file = photo.files[0];
@@ -109,9 +188,7 @@
       document.getElementById("preview-img").src = URL.createObjectURL(file);
       preview.classList.remove("hidden");
     });
-    document.getElementById("clear-photo").addEventListener("click", () => {
-      photo.value = ""; preview.classList.add("hidden");
-    });
+    document.getElementById("clear-photo").addEventListener("click", () => { photo.value = ""; preview.classList.add("hidden"); });
 
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
@@ -120,33 +197,34 @@
       data.append("donor_id", DONOR);
       data.append("text", text.value.trim());
       if (photo.files[0]) data.append("photo", photo.files[0]);
+      const sent = text.value;
       text.value = ""; photo.value = ""; preview.classList.add("hidden");
       try { await api("/api/kitchen/message", { method: "POST", body: data }); }
-      catch (err) { alertUser("Not sent", err.message); }
+      catch (err) { text.value = sent; alertUser(t("not_sent"), err.message); }
     });
     text.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); form.requestSubmit(); }
     });
 
-    // Voice note: the browser's speech recognition fills the text box (Amazon Transcribe is on the roadmap).
+    // Voice note: the browser's own speech recognition fills the text box. Hidden where the browser has none.
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) mic.hidden = true;
     let recognizer = null;
     mic.addEventListener("click", () => {
       if (recognizer) { recognizer.stop(); return; }
       recognizer = new Recognition();
-      recognizer.lang = LANG === "ar" ? "ar-AE" : "en-US";
+      recognizer.lang = AR() ? "ar-AE" : "en-US";
       recognizer.interimResults = true;
       const before = text.value ? text.value + " " : "";
-      recognizer.onresult = (ev) => {
-        text.value = before + Array.from(ev.results).map((r) => r[0].transcript).join("");
-      };
+      recognizer.onresult = (ev) => { text.value = before + Array.from(ev.results).map((r) => r[0].transcript).join(""); };
       recognizer.onend = () => { mic.classList.remove("recording"); text.placeholder = t("placeholder"); recognizer = null; };
       recognizer.onerror = recognizer.onend;
       mic.classList.add("recording");
       text.placeholder = t("listening");
       recognizer.start();
     });
+
+    mountHeader({ tagline: true });
   </script>
 </body>
 </html>

@@ -10,7 +10,7 @@ import traceback
 from . import config, events, notify, tools
 from .store import store
 
-SYSTEM_PROMPT = """You are Plenty, a food-rescue coordinator for Dubai. A commercial kitchen has surplus food.
+SYSTEM_PROMPT = """You are Plentli, a food-rescue coordinator for Dubai. A commercial kitchen has surplus food.
 Your job: get as much of it as possible to people who need it tonight, safely, with no phone calls.
 
 How to work:
