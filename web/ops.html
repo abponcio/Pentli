@@ -141,7 +141,7 @@
       reset: "Start over", reset_done: "Cleared",
       // Impact
       impact_wait_h: "Impact appears after receipt.", impact_wait_sub: "Meals count only once recipients confirm the handover.",
-      impact_sub_done: "All handovers confirmed", meals_received: "Meals received", orgs: "Recipient organisations", time_to_driver: "Time to driver confirmation",
+      impact_sub_done: "All handovers confirmed", impact_sub_partial: "More handovers on the way", partial_h: (n) => `${n} meals received so far.`, meals_received: "Meals received", orgs: "Recipient organisations", time_to_driver: "Time to driver confirmation",
       handover_records: "Handover records", h_recipient: "Recipient", h_meals: "Meals", h_received: "Received", h_status: "Status",
       recorded_after: "Recorded after recipient confirmation.", env: "Environmental estimates", food_weight: "Food weight", co2e: "CO₂e avoided",
       not_calculated: "Not calculated", env_note: "Add a verified weight basis and cited emissions factor.",
@@ -173,7 +173,7 @@
       unsafe_banner: "وصلت توصيلة بعد انتهاء فترة الأمان. تم إبلاغ الجهة بعدم تقديمها.",
       reset: "البدء من جديد", reset_done: "تم المسح",
       impact_wait_h: "يظهر الأثر بعد الاستلام.", impact_wait_sub: "تُحتسب الوجبات فقط بعد أن تؤكد الجهات الاستلام.",
-      impact_sub_done: "تم تأكيد كل عمليات التسليم", meals_received: "وجبة مستلمة", orgs: "جهات مستفيدة", time_to_driver: "الوقت حتى تأكيد السائق",
+      impact_sub_done: "تم تأكيد كل عمليات التسليم", impact_sub_partial: "المزيد من عمليات التسليم في الطريق", partial_h: (n) => `تم استلام ${n} وجبة حتى الآن.`, meals_received: "وجبة مستلمة", orgs: "جهات مستفيدة", time_to_driver: "الوقت حتى تأكيد السائق",
       handover_records: "سجلات التسليم", h_recipient: "الجهة", h_meals: "الوجبات", h_received: "وقت الاستلام", h_status: "الحالة",
       recorded_after: "سُجّل بعد تأكيد الجهة المستلمة.", env: "التقديرات البيئية", food_weight: "وزن الطعام", co2e: "ثاني أكسيد الكربون المُتجنَّب",
       not_calculated: "لم يُحتسب", env_note: "أضف أساساً موثقاً للوزن ومعامل انبعاثات بمصدر.",
@@ -454,7 +454,13 @@
 
     function renderImpact() {
       const box = $("impact");
-      const imp = rescue && rescue.impact;
+      const received = rescue && rescue.route ? rescue.route.stops.filter((s) => s.status === "received" && !s.unsafe) : [];
+      // Until every handover is confirmed, show what has been received so far.
+      const imp = (rescue && rescue.impact) || (received.length ? {
+        meals: received.reduce((n, s) => n + s.portions, 0), recipients: received.length, kg: null, co2e_kg: null,
+        safe_until: hhmm(rescue.safety.safe_until), partial: true,
+        seconds_to_dispatch: rescue.dispatched_ts ? Math.round(rescue.dispatched_ts - rescue.created_ts) : null,
+      } : null);
       if (!imp) {
         box.replaceChildren(el("section", { class: "hero" }, el("div", {}, el("h1", {}, t("impact_wait_h")), el("p", { class: "sub" }, t("impact_wait_sub")))));
         return;
@@ -463,7 +469,7 @@
       const stops = rescue.route.stops;
       const secs = imp.seconds_to_dispatch;
       box.replaceChildren(
-        el("section", { class: "hero" }, el("div", {}, el("h1", {}, tf("completed_h", imp.meals)), el("p", { class: "sub" }, `${t("rescue")} `, ltr(rescue.id), ` · ${t("impact_sub_done")}`))),
+        el("section", { class: "hero" }, el("div", {}, el("h1", {}, tf(imp.partial ? "partial_h" : "completed_h", imp.meals)), el("p", { class: "sub" }, `${t("rescue")} `, ltr(rescue.id), ` · ${imp.partial ? t("impact_sub_partial") : t("impact_sub_done")}`))),
         el("section", { class: "tiles" },
           el("div", { class: "tile dark" }, el("span", { class: "bubble-icon big" }, icon("utensils", 40)), el("div", {}, el("div", { class: "v" }, imp.meals), el("div", { class: "k" }, t("meals_received")))),
           el("div", { class: "tile" }, el("span", { class: "bubble-icon big" }, icon("users", 40)), el("div", {}, el("div", { class: "v" }, imp.recipients ?? stops.length), el("div", { class: "k" }, t("orgs")))),
