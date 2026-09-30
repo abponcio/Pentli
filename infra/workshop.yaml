@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Plentli on the AWS Summit hackathon (Workshop Studio) account. Same data resources as template.yaml plus
+  the role the Lambda function runs as. IAM role names must start with "workshop-" here, and there is no EC2, ECS or App Runner access. See infra/DEPLOY.md, "Hackathon account".
+
+Parameters:
+  Stage:
+    Type: String
+    Default: demo
+    AllowedPattern: "[a-z0-9-]+"
+
+Resources:
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub plentli-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      SSESpecification: { SSEEnabled: true }
+
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub plentli-${Stage}-notifications
+      KmsMasterKeyId: alias/aws/sns
+
+  PhotoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub plentli-${Stage}-photos-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      LifecycleConfiguration:
+        Rules:
+          - { Id: expire-demo-photos, Status: Enabled, ExpirationInDays: 7 }
+
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub workshop-plentli-${Stage}-app
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: [lambda.amazonaws.com] }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: plentli-app
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Bedrock
+                Effect: Allow
+                # The Converse and ConverseStream APIs are authorised by these two actions.
+                Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+                # Cross-Region inference routes to foundation models in other Regions.
+                Resource:
+                  - arn:aws:bedrock:*::foundation-model/*
+                  - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
+              - Sid: Routes
+                Effect: Allow
+                Action: geo-routes:CalculateRoutes
+                Resource: !Sub arn:aws:geo-routes:${AWS::Region}::provider/default
+              - Sid: Table
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem, dynamodb:BatchWriteItem, dynamodb:Query]
+                Resource: !GetAtt Table.Arn
+              - Sid: Notify
+                Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref Topic
+              - Sid: Photos
+                Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub ${PhotoBucket.Arn}/*
+              - Sid: RunAgentInBackground
+                Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:plentli-${Stage}
+
+Outputs:
+  TableName:
+    Value: !Ref Table
+  TopicArn:
+    Value: !Ref Topic
+  PhotoBucketName:
+    Value: !Ref PhotoBucket
+  AppRoleArn:
+    Value: !GetAtt AppRole.Arn

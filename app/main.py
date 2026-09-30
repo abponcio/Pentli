@@ -21,8 +21,17 @@ app.mount("/static", StaticFiles(directory=WEB), name="static")
 _next_rescue = [1042]  # rescue ids read PL-1042, PL-1043, ... (reset on every demo reset)
 
 
+def next_rescue_id() -> str:
+    if config.SERVERLESS:
+        return f"PL-{store.next_number('rescue_seq', 1042)}"
+    _next_rescue[0] += 1
+    return f"PL-{_next_rescue[0] - 1}"
+
+
 def reset_demo() -> None:
     _next_rescue[0] = 1042
+    if config.SERVERLESS:
+        store.delete_meta("rescue_seq")
     store.clear()
     events.clear()
     photos.clear()
@@ -31,7 +40,9 @@ def reset_demo() -> None:
     events.emit("reset", None, ["all"])
 
 
-reset_demo()
+# On Lambda every cold start imports this module, so only set up the demo the first time.
+if not config.SERVERLESS or not store.list("donor"):
+    reset_demo()
 
 
 def _page(name: str):
@@ -114,8 +125,7 @@ async def kitchen_message(donor_id: str = Form("k1"), text: str = Form(""), phot
         store.update("rescue", rescue["id"], replies=rescue.get("replies", []) + [text])
         rescue_id = rescue["id"]
     else:
-        rescue_id = f"PL-{_next_rescue[0]}"
-        _next_rescue[0] += 1
+        rescue_id = next_rescue_id()
         store.put("rescue", {
             "id": rescue_id, "donor_id": donor_id, "note": text, "replies": [], "status": "received",
             "created_at": clock.now().isoformat(), "created_ts": time.time(), "tool_calls": 0,
@@ -192,6 +202,16 @@ def reset():
     return {"ok": True, "now": clock.fmt(clock.now())}
 
 
+@app.post("/events")
+def background_task(body: dict):
+    """Lambda only: the async invocation agent.start() makes to run one rescue to completion."""
+    if not config.SERVERLESS or not config.TASK_TOKEN or body.get("token") != config.TASK_TOKEN:
+        raise HTTPException(404)
+    if body.get("task") == "run_agent":
+        agent.run(body["rescue_id"])
+    return {"ok": True}
+
+
 @app.get("/api/events")
 async def stream(viewer: str = "ops", since: int = 0, last_event_id: str | None = Header(None)):
     """Server-sent events. viewer: ops | kitchen:<id> | recipient:<id> | driver:<id>.
@@ -211,7 +231,7 @@ async def stream(viewer: str = "ops", since: int = 0, last_event_id: str | None 
             if time.time() - last_ping > 15:
                 last_ping = time.time()
                 yield ": ping\n\n"
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.5 if config.SERVERLESS else 0.3)
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

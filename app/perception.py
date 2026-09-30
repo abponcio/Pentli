@@ -167,7 +167,13 @@ def classify_with_bedrock(note: str, photo: bytes | None, photo_format: str = "j
     prepared_at = None
     if data.get("prepared_time"):
         hour, minute = (int(x) for x in data["prepared_time"].split(":"))
-        prepared_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        # "cooked at 6" with no am/pm means the most recent 6 o'clock, same as the keyword parser.
+        stated = re.search(r"\d\s*(am|pm)\b|(صباح|مساء)", (note or "").lower())
+        meridiem = None
+        if stated:
+            meridiem = "pm" if (stated.group(1) == "pm" or stated.group(2) == "مساء") else "am"
+        prepared_at = _resolve_time(hour % 12 if meridiem else hour, minute, meridiem, now) if hour < 12 or meridiem else \
+            now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         if prepared_at > now:
             prepared_at -= timedelta(days=1)
     missing = [k for k, v in (("portions", data.get("portions")), ("prepared_at", prepared_at)) if not v]
