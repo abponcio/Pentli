@@ -3,66 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f7a4d">
-  <title>Plenty</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>Plentli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/app.css">
   <style>
-    .hero h1 { margin: 0 0 6px; font-size: 1.6rem; }
-    .screens { display: grid; gap: 10px; margin-block: 16px; }
-    .screen { display: flex; gap: 14px; align-items: center; text-decoration: none; color: var(--ink); }
-    .screen .icon { font-size: 1.6rem; inline-size: 44px; text-align: center; flex: none; }
-    .screen strong { display: block; }
-    .qr-row { display: flex; gap: 16px; align-items: center; }
-    #qrcode { background: #fff; padding: 8px; border-radius: 8px; flex: none; }
-    .qr-row > div { min-inline-size: 0; }
+    .hero { display: grid; gap: 10px; padding-block: 8px 4px; }
+    .hero h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.1; }
+    .screens { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .screens a { display: flex; gap: 14px; align-items: center; text-decoration: none; color: var(--ink); min-block-size: 48px; }
+    .screens a .grow { flex: 1; min-inline-size: 0; display: grid; gap: 2px; }
+    .qr-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .qr-row img { background: #fff; padding: 8px; border-radius: 10px; border: 1px solid var(--border); flex: none; }
+    .qr-row > div { min-inline-size: 0; flex: 1; display: grid; gap: 4px; }
     #judge-link { overflow-wrap: anywhere; }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
   </style>
 </head>
 <body>
-  <header class="app-bar">
-    <div class="avatar" aria-hidden="true">P</div>
-    <div>
-      <div class="title">Plenty</div>
-      <div class="sub">Agentic food rescue for Dubai kitchens</div>
-    </div>
-  </header>
-
-  <main class="wrap">
+  <main class="page narrow stack" id="main">
     <section class="hero">
-      <h1>Surplus food to people who need it, before it becomes unsafe.</h1>
-      <p class="muted">A kitchen sends one message. An AI agent works out what the food is, how long it stays safe, who can use it, and which van can get it there in time. Code enforces every food-safety rule.</p>
+      <h1 data-t="hero">Good food. More people.</h1>
+      <p class="muted" data-t="hero_sub"></p>
     </section>
-
-    <nav class="screens" aria-label="Screens">
-      <a class="card screen" href="/kitchen"><span class="icon">👩‍🍳</span><span><strong>Kitchen</strong><span class="muted">Mohsen reports surplus by chat, photo or voice</span></span></a>
-      <a class="card screen" href="/coordinator?r=r3"><span class="icon">🏠</span><span><strong>Charity coordinator</strong><span class="muted">Hope Family Shelter gets offers and accepts or declines</span></span></a>
-      <a class="card screen" href="/driver?d=d1"><span class="icon">🚐</span><span><strong>Driver</strong><span class="muted">HelloChef Van 14 gets the pickup and drop-off route</span></span></a>
-      <a class="card screen" href="/ops"><span class="icon">📊</span><span><strong>Live rescue (big screen)</strong><span class="muted">Agent trace, map, safety clock and impact</span></span></a>
-    </nav>
-
+    <nav class="screens" aria-label="Screens" id="screens"></nav>
     <section class="card qr-row">
       <img id="qrcode" alt="" width="128" height="128">
       <div>
-        <strong>Judges: be the shelter</strong>
-        <p class="muted" style="margin:4px 0">Scan to open Hope Family Shelter's screen on your phone.</p>
-        <a id="judge-link" href="/coordinator?r=r3">/coordinator?r=r3</a>
+        <strong data-t="judge_title"></strong>
+        <span class="muted" data-t="judge_hint"></span>
+        <a id="judge-link" href="/coordinator?r=r3" dir="ltr">/coordinator?r=r3</a>
       </div>
     </section>
-
-    <section class="card">
-      <h2>Demo controls</h2>
-      <p class="muted" id="mode">Loading…</p>
-      <button class="btn danger" type="button" id="reset">Reset demo</button>
+    <section class="card stack">
+      <div class="controls">
+        <h2 data-t="controls"></h2>
+        <button class="btn quiet small" type="button" id="reset"></button>
+      </div>
+      <p class="muted small" id="mode" dir="ltr">…</p>
     </section>
   </main>
   <div class="toast" id="toast" role="status" hidden></div>
-
+  <script src="/static/icons.js"></script>
   <script src="/static/app.js"></script>
   <script>
+    addStrings({
+      hero: "Good food. More people.",
+      hero_sub: "A kitchen sends one message. Plentli works out what the food is, how long it stays safe, who can use it, and which van can get it there in time. Code enforces every food-safety rule.",
+      s_chat: "Donor chat", s_chat_sub: "Mohsen shares surplus by chat, photo or voice",
+      s_rec: "Recipient", s_rec_sub: "Hope Family Shelter accepts or declines an offer",
+      s_drv: "Driver message", s_drv_sub: "HelloChef van 03 gets the pickup and drops",
+      s_live: "Live rescue", s_live_sub: "Map, allocation, safety clock and activity",
+      s_imp: "Impact", s_imp_sub: "Meals received and handover record",
+      judge_title: "Try the recipient view", judge_hint: "Scan to open Hope Family Shelter on your phone.",
+      controls: "Demo controls", reset: "Reset demo", reset_done: "Demo reset",
+    }, {
+      hero: "طعام جيد. لعدد أكبر من الناس.",
+      hero_sub: "يرسل المطبخ رسالة واحدة. يحدد Plentli نوع الطعام ومدة بقائه آمناً ومن يمكنه الاستفادة منه وأي شاحنة توصله في الوقت المناسب. قواعد سلامة الغذاء يطبقها الكود.",
+      s_chat: "محادثة المتبرع", s_chat_sub: "يشارك محسن الفائض بالرسالة أو الصورة أو الصوت",
+      s_rec: "الجهة المستفيدة", s_rec_sub: "يقبل ملجأ الأمل للعائلات العرض أو يرفضه",
+      s_drv: "رسالة السائق", s_drv_sub: "تستلم شاحنة HelloChef رقم 03 الاستلام ونقاط التوصيل",
+      s_live: "الإنقاذ المباشر", s_live_sub: "الخريطة والتوزيع ووقت السلامة والنشاط",
+      s_imp: "الأثر", s_imp_sub: "الوجبات المستلمة وسجل التسليم",
+      judge_title: "جرّب واجهة الجهة المستفيدة", judge_hint: "امسح الرمز لفتح ملجأ الأمل للعائلات على هاتفك.",
+      controls: "أدوات العرض التجريبي", reset: "إعادة ضبط العرض", reset_done: "تمت إعادة الضبط",
+    });
+
+    const SCREENS = [
+      ["/kitchen", "message-circle", "s_chat"], ["/coordinator?r=r3", "building-2", "s_rec"],
+      ["/driver?d=d1", "truck", "s_drv"], ["/ops", "map-pin", "s_live"], ["/ops#impact", "chart-column", "s_imp"],
+    ];
+    function render() {
+      document.getElementById("screens").replaceChildren(...SCREENS.map(([href, ic, key]) =>
+        el("a", { class: "card", href }, el("span", { class: "bubble-icon" }, icon(ic, 22)),
+          el("span", { class: "grow" }, el("strong", {}, t(key)), el("span", { class: "muted small" }, t(key + "_sub"))),
+          icon(AR() ? "arrow-left" : "chevron-right", 20))));
+      document.getElementById("reset").replaceChildren(icon("rotate-ccw", 18), el("span", {}, t("reset")));
+    }
+
+    mountHeader({ nav: null, tagline: true });
+    mountFooter();
+    render();
+    document.addEventListener("langchange", render);
     (async () => {
       const cfg = await api("/api/config");
       document.getElementById("mode").textContent =
-        `Agent: ${cfg.agent_mode === "bedrock" ? cfg.model : "mock planner (no AWS needed)"}. Store: ${cfg.store}. Routing: ${cfg.routing}. Alerts: ${cfg.notify}. Dubai time: ${cfg.now}.`;
+        `Agent: ${cfg.agent_mode === "bedrock" ? cfg.model : "mock planner (no AWS needed)"} · Store: ${cfg.store} · Routing: ${cfg.routing} · Alerts: ${cfg.notify} · Dubai time: ${cfg.now}`;
       const url = `${cfg.public_base_url || location.origin}/coordinator?r=r3`;
       const link = document.getElementById("judge-link");
       link.href = url; link.textContent = url;
@@ -70,7 +97,7 @@
     })();
     document.getElementById("reset").addEventListener("click", async () => {
       const res = await postJSON("/api/reset", {});
-      alertUser("Demo reset", `Clock set to ${res.now}`);
+      alertUser(t("reset_done"), res.now);
     });
   </script>
 </body>

@@ -1,8 +1,8 @@
-# Plenty
+# Plentli
 
 ## Design references
 
-The [visual gallery](gallery.html) contains eleven concept boards. See the [brand guidelines](BRAND.md), [interface guidelines](DESIGN.md), and [screen map](SCREEN_MAP.md) for the proposed Plentli design direction. These are reference assets; the current app and this README use the name Plenty.
+The [visual gallery](gallery.html) contains eleven concept boards. See the [brand guidelines](BRAND.md), [interface guidelines](DESIGN.md), and [screen map](SCREEN_MAP.md) for the Plentli design direction. The app's screens follow these designs.
 
 **Agentic food rescue for Dubai kitchens.** A kitchen sends one message about leftover food. An AI agent works out what the food is and how long it stays safe, finds charities that can use it tonight, and books a van to get it there in time. Code enforces every food-safety rule.
 
@@ -14,26 +14,26 @@ Every night, commercial kitchens in Dubai throw away cooked food that is still s
 
 At HelloChef's Al Quoz kitchen, Mohsen (kitchen operations lead) sees about **[XX] portions** left over on a typical night. Today, most of it goes in the bin because arranging a pickup takes **[XX] minutes** of calls he doesn't have at the end of a shift.
 
-Plenty turns that into one message. In our demo, 50 portions of chicken biryani go from "cooked at 6, has cashews" to a confirmed driver in **under a minute**, with **zero phone calls**:
+Plentli turns that into one message. In our demo, 50 portions of chicken biryani go from "cooked at 6, has cashews" to a confirmed driver in **under a minute**, with **zero phone calls**:
 
 - It never sends nut-containing food to the nut-free care home. The allergen check is code, not a prompt.
 - When a shelter declines, it re-plans on its own and offers the portions to the next partner.
 - It refuses food that is past its safe window, even if the agent would like to send it.
-- Every handover is recorded: meals, kilograms of food saved and CO2e avoided.
+- Every handover is recorded: meals received and organisations served. Weight and CO2e show as "Not calculated" until a verified factor is set.
 
-> Replace the **[XX]** figures with Mohsen's real numbers before submitting. The CO2e factor is set by `CO2E_PER_KG_FOOD` and is a placeholder until it is backed by a cited source.
+> Replace the **[XX]** figures with Mohsen's real numbers before submitting. Weight and CO2e stay "Not calculated" unless `IMPACT_FACTORS_VERIFIED=true`; set that only once `CO2E_PER_KG_FOOD` is backed by a cited source.
 
 ## What you see
 
 | Screen | URL | Who |
 | --- | --- | --- |
-| Kitchen chat | `/kitchen` | Mohsen reports surplus by text, photo or voice (English or Arabic) |
-| Charity coordinator | `/coordinator?r=r3` | Hope Family Shelter gets the offer and taps Accept or Decline. In the demo, a judge plays this role from their own phone via the QR code. |
-| Driver | `/driver?d=d1` | HelloChef Van 14 gets the pickup, the drop-offs and a Navigate button |
-| Live rescue | `/ops` | Big screen: the agent's reasoning and tool calls, a map, the safety clock, offers and impact |
+| Donor chat | `/kitchen` | Mohsen reports surplus by text, photo or voice (English or Arabic) |
+| Recipient | `/coordinator?r=r3` | Hope Family Shelter gets the offer and taps Accept or Decline. In the demo, a judge plays this role from their own phone via the QR code. |
+| Driver | `/driver?d=d1` | HelloChef van 03 gets the pickup, the drops and an Open route map button |
+| Live rescue | `/ops` | Big screen: allocation, map, safety clock and activity (tool details on demand); `/ops#impact` shows the impact summary |
 | Home | `/` | Links to every screen, the judge QR code, and Reset demo |
 
-All phone screens are mobile-first, work in English and Arabic (right to left), in light and dark mode, and raise an alert (toast, vibration, and a system notification when allowed) when something needs attention.
+All phone screens are mobile-first, work in English and Arabic (right to left), and raise an alert (toast, vibration, and a system notification when allowed) when something needs attention.
 
 ## How it works
 

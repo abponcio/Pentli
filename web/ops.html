@@ -2,294 +2,530 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Plenty · Live rescue</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Plentli · Live rescue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/app.css">
   <style>
-    .ops { display: grid; gap: 16px; padding: 16px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); max-inline-size: 1500px; margin: 0 auto; }
-    @media (max-width: 900px) { .ops { grid-template-columns: 1fr; } }
-    .panel-title { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 1rem; }
-    .trace { display: flex; flex-direction: column; gap: 8px; max-block-size: calc(100dvh - 150px); overflow-y: auto; padding-inline-end: 4px; }
-    .line { display: grid; grid-template-columns: 64px auto 1fr; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 0.92rem; animation: in 0.25s ease-out; }
-    .line .when { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 0.8rem; padding-block-start: 2px; }
-    .line .step { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; }
-    .line .summary { grid-column: 2 / -1; overflow-wrap: anywhere; }
-    .line.reasoning { background: var(--ai-soft); }
-    .line.reasoning .summary { font-style: italic; color: var(--ai); }
-    .line.warn { background: var(--warn-soft); }
-    .line.blocked { background: var(--bad-soft); }
-    .line.blocked .summary { color: var(--bad); font-weight: 600; }
-    @keyframes in { from { opacity: 0; translate: 0 6px; } }
-    @media (prefers-reduced-motion: reduce) { .line { animation: none; } }
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-    @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-    .stat .v { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-    .stat .k { font-size: 0.78rem; color: var(--ink-2); }
-    .stat.hot .v { color: var(--brand); }
-    #map { block-size: 340px; border-radius: 12px; border: 1px solid var(--line); z-index: 0; }
-    .side { display: flex; flex-direction: column; gap: 12px; }
-    .side .card + .card { margin: 0; }
-    .offers { display: grid; gap: 6px; }
-    .offer-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.92rem; }
-    .impact { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 8px; }
-    .impact .v { font-size: 1.8rem; font-weight: 700; color: var(--brand); }
-    .qr { display: flex; gap: 14px; align-items: center; }
-    .qr #qrcode { background: #fff; padding: 8px; border-radius: 8px; flex: none; }
-    .facts-line { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 6px; }
-    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-2); margin-block-start: 6px; }
-    .dot { display: inline-block; inline-size: 10px; block-size: 10px; border-radius: 50%; margin-inline-end: 4px; vertical-align: middle; }
+    .hero { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+    .hero .sub { color: var(--muted); font-size: clamp(1.1rem, 0.9rem + 0.8vw, 1.6rem); margin-block-start: 6px; }
+    .timer { display: flex; align-items: center; gap: 18px; background: var(--forest); color: var(--white); border-radius: var(--radius-card); padding: 18px 26px; min-inline-size: 260px; }
+    .timer .v { font-family: "Manrope", system-ui, sans-serif; font-weight: 800; font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; direction: ltr; }
+    .timer .k { font-size: 1rem; opacity: 0.92; }
+    .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--sage); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 14px 18px; gap: 12px; }
+    .strip .cell { display: flex; align-items: center; gap: 14px; min-inline-size: 0; }
+    .strip .cell + .cell { border-inline-start: 1px solid #cfdccf; padding-inline-start: 18px; }
+    .strip .big { font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; font-variant-numeric: tabular-nums; }
+    .strip .bubble-icon { background: #d5e5d3; }
+    @media (max-width: 900px) { .strip { grid-template-columns: 1fr; } .strip .cell + .cell { border-inline-start: 0; padding-inline-start: 0; border-block-start: 1px solid #cfdccf; padding-block-start: 12px; } }
+    .board { display: grid; gap: 16px; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr) minmax(0, 0.95fr); grid-template-areas: "left map right"; align-items: start; }
+    .board > .left { grid-area: left; display: grid; gap: 16px; }
+    .board > .mapcol { grid-area: map; }
+    .board > .right { grid-area: right; display: grid; gap: 16px; }
+    @media (max-width: 1180px) { .board { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); grid-template-areas: "left map" "right right"; } }
+    @media (max-width: 760px) { .board { grid-template-columns: minmax(0, 1fr); grid-template-areas: "left" "right" "map"; } }
+    .food-photo { inline-size: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 12px; background: var(--sage); }
+    .food-ph { inline-size: 100%; aspect-ratio: 16 / 7; border-radius: 12px; background: var(--sage); display: grid; place-items: center; color: var(--green); }
+    .facts { display: grid; gap: 8px; }
+    .alloc-row { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
+    .alloc-row + .alloc-row { border-block-start: 1px solid var(--border); }
+    .alloc-row .grow { flex: 1; min-inline-size: 0; display: grid; gap: 4px; justify-items: start; }
+    .alloc-row .eta { font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+    .alloc-row .eta b { color: var(--ink); }
+    .strike { text-decoration: line-through; color: var(--muted); }
+    .mapcard { padding: 0; overflow: hidden; }
+    .mapwrap { position: relative; }
+    #map { block-size: clamp(320px, 52vh, 560px); background: #e8efe9; }
+    .map-cap { position: absolute; inset-block-start: 12px; inset-inline-start: 12px; z-index: 500; background: var(--white); border-radius: 8px; padding: 6px 12px; font-size: 0.9rem; box-shadow: 0 1px 4px rgb(0 0 0 / 0.12); }
+    .map-cap span { color: var(--muted); }
+    .driverbar { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-block-start: 1px solid var(--border); }
+    .driverbar .grow { flex: 1; min-inline-size: 0; }
+    .driverbar strong { font-family: var(--font-display); font-size: 1.2rem; display: block; }
+    .pin { inline-size: 34px; block-size: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Inter", sans-serif; border: 2px solid #fff; box-shadow: 0 2px 6px rgb(0 0 0 / 0.25); background: var(--forest); }
+    .pin.grey { background: #8b938e; } .pin.amber { background: var(--amber-ink); } .pin.kitchen { background: var(--green); border-radius: 10px; } .pin.van { background: #fff; color: var(--forest); border-color: var(--forest); }
+    .pin.small { inline-size: 14px; block-size: 14px; background: #a9b4ad; }
+    .live-pill { margin-inline-start: auto; }
+    .card-head { display: flex; align-items: center; gap: 10px; }
+    .qr-card .qr { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .qr-card img { inline-size: 132px; block-size: 132px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+    .qr-card .grow { flex: 1; min-inline-size: 160px; display: grid; gap: 8px; }
+    .trace { display: grid; gap: 8px; margin-block-start: 12px; max-block-size: 60vh; overflow-y: auto; }
+    .trace .line { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; padding: 10px 12px; border-radius: 10px; background: var(--ivory); font-size: 0.88rem; }
+    .trace .line.reasoning { background: #f1effc; }
+    .trace .line.warn { background: var(--amber); }
+    .trace .line.blocked { background: var(--amber); color: var(--amber-ink); font-weight: 600; }
+    .trace .line .step { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; }
+    .trace .line .summary { grid-column: 1 / -1; overflow-wrap: anywhere; }
+    .trace .line.reasoning .summary { font-style: italic; color: #4b3aa8; }
+    /* Impact view */
+    .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 900px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+    .tile { display: flex; align-items: center; gap: 22px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--white); padding: 24px; }
+    .tile.dark { background: var(--forest); color: var(--white); border-color: transparent; }
+    .tile.dark .bubble-icon { background: var(--white); color: var(--forest); }
+    .tile .v { font-family: "Manrope", system-ui, sans-serif; font-weight: 800; font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+    .tile .k { font-size: 1.1rem; }
+    .tile:not(.dark) .k { color: var(--muted); }
+    .impact-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .impact-grid { grid-template-columns: minmax(0, 1fr); } }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+    table { border-collapse: collapse; inline-size: 100%; min-inline-size: 460px; }
+    th { text-align: start; font-weight: 500; color: var(--muted); background: var(--ivory); padding: 12px 16px; font-size: 0.92rem; }
+    td { padding: 14px 16px; border-block-start: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+    .tagline-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--sage); border-radius: var(--radius-card); padding: 24px; }
+    .tagline-card p { font-family: "Manrope", system-ui, sans-serif; font-weight: 800; font-size: 2rem; line-height: 1.1; color: var(--forest); }
+    .tagline-card .rings { display: flex; gap: 12px; color: var(--forest); }
+    .tagline-card .rings span { inline-size: 72px; block-size: 72px; border: 2px solid var(--forest); border-radius: 50%; display: grid; place-items: center; }
+    .controls { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
-  <header class="app-bar">
-    <div class="avatar" aria-hidden="true">P</div>
-    <div>
-      <div class="title">Plenty · live rescue</div>
-      <div class="sub" id="mode">connecting…</div>
-    </div>
-    <div class="spacer"></div>
-    <a class="lang-toggle" href="/" style="display:grid;place-items:center;text-decoration:none">Screens</a>
-    <button class="lang-toggle" type="button" id="reset">Reset demo</button>
-  </header>
-
-  <main class="ops">
-    <section class="card">
-      <h2 class="panel-title">Agent trace
-        <span class="badge ai">AI decides</span><span class="badge code">CODE enforces</span></h2>
-      <div class="trace" id="trace">
-        <div class="empty">Waiting for a kitchen to report surplus food…</div>
-      </div>
+  <main class="page stack" id="live">
+    <section class="hero">
+      <div><h1 id="headline">Waiting for surplus.</h1><p class="sub" id="subline"></p></div>
+      <div class="timer" id="timer-card"><span id="timer-icon"></span><div><div class="v" id="timer">00:00</div><div class="k" id="timer-label"></div></div></div>
     </section>
-
-    <section class="side">
-      <div class="stats">
-        <div class="stat hot"><div class="v" id="timer">0:00</div><div class="k">time to confirmed driver</div></div>
-        <div class="stat"><div class="v" id="tools">0</div><div class="k">agent tool calls</div></div>
-        <div class="stat"><div class="v" id="placed">0/0</div><div class="k">portions placed</div></div>
-        <div class="stat"><div class="v" id="serveby">--:--</div><div class="k">serve by (food safety)</div></div>
+    <div id="banner"></div>
+    <section class="strip" id="strip" aria-live="polite"></section>
+    <section class="board">
+      <div class="left">
+        <section class="card" id="surplus"></section>
+        <section class="card" id="allocation"></section>
       </div>
-
-      <div class="card" id="rescue-card">
-        <h2 class="panel-title">Rescue <span class="badge" id="status">idle</span></h2>
-        <div id="rescue-body" class="muted">No rescue yet.</div>
-      </div>
-
-      <div class="card">
-        <div id="map" role="img" aria-label="Map of the kitchen, partners, drivers and route"></div>
-        <div class="legend">
-          <span><span class="dot" style="background:#1f7a4d"></span>kitchen</span>
-          <span><span class="dot" style="background:#2e7dd7"></span>partner</span>
-          <span><span class="dot" style="background:#e39b20"></span>offered</span>
-          <span><span class="dot" style="background:#18a058"></span>accepted</span>
-          <span><span class="dot" style="background:#d03b30"></span>declined / blocked</span>
-          <span><span class="dot" style="background:#6b4fd8"></span>driver</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2 class="panel-title">Offers</h2>
-        <div class="offers" id="offers"><div class="muted">None yet.</div></div>
-      </div>
-
-      <div class="card hidden" id="impact-card">
-        <h2 class="panel-title">Impact <span class="badge good">handover recorded</span></h2>
-        <div class="impact">
-          <div><div class="v" id="meals">0</div><div class="muted">meals</div></div>
-          <div><div class="v" id="kg">0</div><div class="muted">kg food saved</div></div>
-          <div><div class="v" id="co2">0</div><div class="muted">kg CO2e avoided</div></div>
-        </div>
-        <p class="muted" id="co2-source" style="margin-block-end:0"></p>
-      </div>
-
-      <div class="card qr">
-        <img id="qrcode" alt="" width="128" height="128">
-        <div>
-          <strong>Be the shelter</strong>
-          <p class="muted" style="margin:4px 0">Scan to play Hope Family Shelter. Accept or decline the offer live.</p>
-          <a id="judge-link" href="/coordinator?r=r3">Open the shelter screen</a>
-        </div>
+      <section class="card mapcard mapcol">
+        <div class="mapwrap"><div id="map" dir="ltr" role="img" aria-label="Map of the kitchen, recipients and route"></div><div class="map-cap" id="map-cap"></div></div>
+        <div class="driverbar" id="driverbar"></div>
+      </section>
+      <div class="right">
+        <section class="card qr-card" id="qr-card"></section>
+        <section class="card" id="activity"></section>
       </div>
     </section>
   </main>
 
+  <main class="page stack hidden" id="impact"></main>
+  <div class="controls"><button class="linkbtn" type="button" id="reset"></button></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
   <script src="/static/vendor/leaflet/leaflet.js"></script>
+  <script src="/static/icons.js"></script>
   <script src="/static/app.js"></script>
   <script>
-    const traceEl = document.getElementById("trace");
-    let world = null;           // seed data from /api/state
-    let rescue = null;          // latest rescue record
-    const offers = new Map();   // offer id -> offer
-    let timerHandle = null;
+    addStrings({
+      waiting_h: "Waiting for surplus.", waiting_sub: "Send a message from the donor chat to start a rescue.",
+      reading_h: "Reading the surplus.", question_h: "One question for the kitchen.",
+      finding_h: (n) => `Finding a home for ${n} meals.`, replan_h: "One decline. A new plan.",
+      dispatched_h: (n, k) => `${n} meals. ${k === 1 ? "One destination" : k === 2 ? "Two destinations" : k === 3 ? "Three destinations" : k + " destinations"}.`,
+      completed_h: (n) => `${n} meals shared.`, paused_h: "Dispatch paused.", expired_h: "Too late to share safely.", failed_h: "Rescue stopped.",
+      kitchen_city: "HelloChef kitchen · Dubai",
+      t_progress: "Rescue in progress", t_driver: "Driver confirmed", t_done: "Handovers confirmed", t_stopped: "Rescue stopped",
+      allocated: "portions allocated", available: "portions available", reading: "Reading the surplus",
+      serve_pending: "Serve-by time pending facts", checks_passed: "Dietary checks passed", waiting_replies: "Waiting for replies",
+      paused: "Dispatch paused", expired: "Past the safe window", delivering: "Out for delivery",
+      the_surplus: "The surplus", no_surplus: "No surplus reported yet.", prepared: "Prepared", room_temp: "Room temperature",
+      storage_ambient: "Room temperature", storage_chilled: "Chilled", storage_frozen: "Frozen", storage_hot_held: "Kept hot",
+      proposed: "Proposed allocation", confirmed_dest: "Confirmed destinations", no_alloc: "Offers appear here once the food is checked.",
+      awaiting: "Awaiting acceptance", accepted: "Accepted", declined: "Declined", no_reply: "No reply", delivered: "Delivered", received: "Received",
+      excluded: (name) => `${name} excluded`, placed_line: (a, b) => `${a} of ${b} portions placed`, none_left: "No meals left unmatched",
+      pending_confirm: "Pending recipient confirmation", all_confirmed: "All recipients confirmed",
+      cap_candidates: "Candidate locations", cap_route: "Route preview", cap_proposed: "Proposed route", demo_locations: "Demo locations", not_dispatched: "Not dispatched",
+      driver_pending: "Driver selection pending", driver_pending_hint: "We'll assign a driver once a recipient confirms.", confirmed: "Confirmed", pickup_at: "Pickup",
+      try_view: "Try the recipient view", try_hint: "Scan to open the Family shelter offer on your phone.", open_offer: "Open recipient offer",
+      activity: "Activity", live: "Live", no_activity: "Activity appears as the agent works.",
+      tool_details: "View tool details", hide_details: "Hide tool details",
+      declined_banner: (name) => `${name} declined. Updating the plan.`, paused_banner: "Dispatch paused. No messages sent.",
+      expired_banner: "This food is past its safe window. The kitchen has been told not to send it.", failed_banner: "The rescue stopped. Open the tool details to see why.",
+      unsafe_banner: "A delivery arrived after the safe window. The recipient was told not to serve it.",
+      reset: "Reset demo", reset_done: "Demo reset",
+      // Impact
+      impact_wait_h: "Impact appears after receipt.", impact_wait_sub: "Meals count only once recipients confirm the handover.",
+      impact_sub_done: "All handovers confirmed", meals_received: "Meals received", orgs: "Recipient organisations", time_to_driver: "Time to driver confirmation",
+      handover_records: "Handover records", h_recipient: "Recipient", h_meals: "Meals", h_received: "Received", h_status: "Status",
+      recorded_after: "Recorded after recipient confirmation.", env: "Environmental estimates", food_weight: "Food weight", co2e: "CO₂e avoided",
+      not_calculated: "Not calculated", env_note: "Add a verified weight basis and cited emissions factor.",
+      tag1: "Good food.", tag2: "More people.",
+    }, {
+      waiting_h: "بانتظار فائض الطعام.", waiting_sub: "أرسل رسالة من محادثة المتبرع لبدء عملية إنقاذ.",
+      reading_h: "نقرأ تفاصيل الفائض.", question_h: "سؤال واحد للمطبخ.",
+      finding_h: (n) => `نبحث عن جهات لـ${n} وجبة.`, replan_h: "رفضٌ واحد. خطة جديدة.",
+      dispatched_h: (n, k) => `${n} وجبة. ${k === 1 ? "وجهة واحدة" : k === 2 ? "وجهتان" : k + " وجهات"}.`,
+      completed_h: (n) => `تمت مشاركة ${n} وجبة.`, paused_h: "توقف الإرسال.", expired_h: "فات وقت المشاركة الآمنة.", failed_h: "توقفت عملية الإنقاذ.",
+      kitchen_city: "مطبخ HelloChef · دبي",
+      t_progress: "الإنقاذ جارٍ", t_driver: "تم تأكيد السائق", t_done: "تم تأكيد التسليم", t_stopped: "توقفت العملية",
+      allocated: "وجبة موزعة", available: "وجبة متاحة", reading: "نقرأ تفاصيل الفائض",
+      serve_pending: "وقت التقديم بانتظار المعلومات", checks_passed: "اجتازت فحوص النظام الغذائي", waiting_replies: "بانتظار الردود",
+      paused: "توقف الإرسال", expired: "انتهت فترة الأمان", delivering: "قيد التوصيل",
+      the_surplus: "الفائض", no_surplus: "لم يُبلَّغ عن فائض بعد.", prepared: "حُضّر", room_temp: "بدرجة حرارة الغرفة",
+      storage_ambient: "بدرجة حرارة الغرفة", storage_chilled: "مبرد", storage_frozen: "مجمد", storage_hot_held: "محفوظ ساخناً",
+      proposed: "التوزيع المقترح", confirmed_dest: "الوجهات المؤكدة", no_alloc: "تظهر العروض هنا بعد فحص الطعام.",
+      awaiting: "بانتظار القبول", accepted: "مقبول", declined: "مرفوض", no_reply: "لا رد", delivered: "تم التوصيل", received: "تم الاستلام",
+      excluded: (name) => `استُبعدت ${name}`, placed_line: (a, b) => `تم توزيع ${a} من ${b} وجبة`, none_left: "لم تبقَ وجبات دون توزيع",
+      pending_confirm: "بانتظار تأكيد الجهات", all_confirmed: "أكدت كل الجهات",
+      cap_candidates: "المواقع المرشحة", cap_route: "معاينة المسار", cap_proposed: "المسار المقترح", demo_locations: "مواقع تجريبية", not_dispatched: "لم يُرسل",
+      driver_pending: "اختيار السائق معلق", driver_pending_hint: "سنعيّن سائقاً بعد أن تؤكد جهة مستفيدة.", confirmed: "مؤكد", pickup_at: "الاستلام",
+      try_view: "جرّب واجهة الجهة المستفيدة", try_hint: "امسح الرمز لفتح عرض مأوى العائلات على هاتفك.", open_offer: "فتح عرض الجهة",
+      activity: "النشاط", live: "مباشر", no_activity: "يظهر النشاط أثناء عمل الوكيل.",
+      tool_details: "عرض تفاصيل الأدوات", hide_details: "إخفاء تفاصيل الأدوات",
+      declined_banner: (name) => `رفضت ${name}. نحدّث الخطة.`, paused_banner: "توقف الإرسال. لم تُرسل أي رسائل.",
+      expired_banner: "انتهت فترة الأمان لهذا الطعام. تم إبلاغ المطبخ بعدم إرساله.", failed_banner: "توقفت عملية الإنقاذ. افتح تفاصيل الأدوات لمعرفة السبب.",
+      unsafe_banner: "وصلت توصيلة بعد انتهاء فترة الأمان. تم إبلاغ الجهة بعدم تقديمها.",
+      reset: "إعادة ضبط العرض", reset_done: "تمت إعادة الضبط",
+      impact_wait_h: "يظهر الأثر بعد الاستلام.", impact_wait_sub: "تُحتسب الوجبات فقط بعد أن تؤكد الجهات الاستلام.",
+      impact_sub_done: "تم تأكيد كل عمليات التسليم", meals_received: "وجبة مستلمة", orgs: "جهات مستفيدة", time_to_driver: "الوقت حتى تأكيد السائق",
+      handover_records: "سجلات التسليم", h_recipient: "الجهة", h_meals: "الوجبات", h_received: "وقت الاستلام", h_status: "الحالة",
+      recorded_after: "سُجّل بعد تأكيد الجهة المستلمة.", env: "التقديرات البيئية", food_weight: "وزن الطعام", co2e: "ثاني أكسيد الكربون المُتجنَّب",
+      not_calculated: "لم يُحتسب", env_note: "أضف أساساً موثقاً للوزن ومعامل انبعاثات بمصدر.",
+      tag1: "Good food.", tag2: "More people.",
+    });
+    const tf = (key, ...args) => { const v = t(key); return typeof v === "function" ? v(...args) : v; };
 
-    const COLORS = { kitchen: "#1f7a4d", partner: "#2e7dd7", offered: "#e39b20", accepted: "#18a058", declined: "#d03b30", driver: "#6b4fd8" };
-    let map, layers;
+    // Activity labels: short, human names for each tool step. The raw trace stays under "View tool details".
+    const STEP_LABELS = {
+      intake: [["Surplus reported", "تم الإبلاغ عن فائض"]],
+      classify_surplus: [["Surplus understood", "فهمنا الفائض"]],
+      ask_donor: [["Asked the kitchen a question", "سألنا المطبخ سؤالاً"]],
+      get_safe_window: [["Safety window set", "تم تحديد فترة الأمان"], ["Past the safe window", "انتهت فترة الأمان"]],
+      find_recipients: [["Recipients found", "تم العثور على جهات"]],
+      check_dietary: [["Dietary checks passed", "اجتازت فحوص النظام الغذائي"], ["A recipient was excluded", "استُبعدت جهة"]],
+      validate_allocation: [["Split checked", "تم التحقق من التوزيع"], ["Split rejected", "رُفض التوزيع"]],
+      offers_sent: [["Offers sent", "أُرسلت العروض"]], offers_ok: [["Offers accepted", "قُبلت العروض"]], offers_decline: [["Decline received", "وصل رفض"]],
+      offers_refused: [["Offers not sent", "لم تُرسل العروض"]],
+      find_drivers: [["Drivers ranked", "تم ترتيب السائقين"]],
+      plan_route: [["Route planned", "تم تخطيط المسار"]],
+      dispatch_and_notify: [["Driver confirmed", "تم تأكيد السائق"], ["Dispatch paused", "توقف الإرسال"]],
+      pickup: [["Picked up", "تم الاستلام من المطبخ"]],
+      arrival_check: [["Arrived in the safe window", "وصل ضمن فترة الأمان"], ["Arrived too late", "وصل متأخراً"]],
+      handover: [["Handover confirmed", "تم تأكيد التسليم"]],
+      record_impact: [["Impact recorded", "تم تسجيل الأثر"]],
+      error: [["Agent problem", "مشكلة في الوكيل"], ["Agent stopped", "توقف الوكيل"]],
+      warning: [["Service warning", "تحذير من الخدمة"]],
+    };
+
+    let world = null, rescue = null;
+    const offers = new Map();     // offer id -> offer (current rescue)
+    let traces = [];              // trace events for the current rescue
+    let showTools = false;
+    try { showTools = localStorage.getItem("plentli-tools") === "1"; } catch {}
+    let judgeUrl = "/coordinator?r=r3";
+
+    const $ = (id) => document.getElementById(id);
+    const rec = (id) => world.recipients.find((r) => r.id === id) || { id, name: id };
+    const hhmm = (iso) => (iso ? iso.slice(11, 16) : "");
+    const clockText = (s) => { s = Math.max(0, Math.round(s)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+    const placed = () => Object.values((rescue && rescue.accepted) || {}).reduce((a, b) => a + b, 0);
+    const lastGate = () => [...traces].reverse().find((e) => e.step === "dispatch_and_notify");
+    const gateBlocked = () => { const g = lastGate(); return g && g.status === "blocked" && rescue && !["dispatched", "delivering", "completed"].includes(rescue.status); };
+    const dispatched = () => rescue && ["dispatched", "delivering", "completed"].includes(rescue.status);
+    const latestOffers = () => {
+      const byRec = new Map();
+      for (const o of offers.values()) byRec.set(o.recipient_id, o);
+      return [...byRec.values()];
+    };
+
+    // Map ----------------------------------------------------------------------
+    let map, layers, lastPts = null;
     function initMap() {
-      if (!window.L) { document.getElementById("map").textContent = "Map unavailable offline."; return; }
-      map = L.map("map", { zoomControl: false, attributionControl: true }).setView([25.14, 55.23], 12);
+      if (!window.L) { $("map").textContent = "Map unavailable."; return; }
+      map = L.map("map", { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([25.14, 55.23], 12);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
       layers = L.layerGroup().addTo(map);
+      // The board can settle after the first draw (fonts, replayed events); keep the pins in view.
+      new ResizeObserver(() => { map.invalidateSize(); if (lastPts) map.fitBounds(lastPts, { padding: [48, 48], maxZoom: 14, animate: false }); }).observe($("map"));
     }
-
-    function marker(p, color, label, radius = 9) {
-      return L.circleMarker([p.lat, p.lng], { radius, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip(label);
+    function pin(p, cls, html, label) {
+      const node = el("div", { class: `pin ${cls}` });
+      if (typeof html === "string") node.textContent = html; else if (html) node.append(html);
+      const size = cls.includes("small") ? 14 : 34;
+      return L.marker([p.lat, p.lng], { icon: L.divIcon({ className: "", html: node.outerHTML, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), keyboard: false }).bindTooltip(label);
     }
-
-    function recipientColor(id) {
-      if (!rescue) return COLORS.partner;
-      if (rescue.accepted && rescue.accepted[id]) return COLORS.accepted;
-      if ((rescue.declined || []).includes(id)) return COLORS.declined;
-      if (rescue.dietary && rescue.dietary[id] && !rescue.dietary[id].ok) return COLORS.declined;
-      if ([...offers.values()].some((o) => o.recipient_id === id && o.status === "pending")) return COLORS.offered;
-      return COLORS.partner;
-    }
-
     function drawMap() {
       if (!map || !world) return;
       layers.clearLayers();
-      const pts = [];
-      world.donors.forEach((d) => { marker(d, COLORS.kitchen, d.name, 11).addTo(layers); pts.push([d.lat, d.lng]); });
-      world.recipients.forEach((r) => { marker(r, recipientColor(r.id), r.name).addTo(layers); pts.push([r.lat, r.lng]); });
-      world.drivers.forEach((d) => marker(d, COLORS.driver, `${d.name} (${d.driver})`, 7).addTo(layers));
+      const donor = world.donors[0];
+      const pts = [[donor.lat, donor.lng]];
+      pin(donor, "kitchen", icon("utensils", 18), donor.name).addTo(layers);
+      const order = allocationRows();
+      const numbered = new Map(order.map((r, i) => [r.id, i + 1]));
+      world.recipients.forEach((r) => {
+        const row = order.find((x) => x.id === r.id);
+        const excluded = rescue && rescue.dietary && rescue.dietary[r.id] && !rescue.dietary[r.id].ok;
+        if (row) { pin(r, row.state === "declined" || row.state === "expired" ? "grey" : "", row.state === "declined" || row.state === "expired" ? "×" : String(numbered.get(r.id)), localName(r)).addTo(layers); pts.push([r.lat, r.lng]); }
+        else if (excluded) { pin(r, "amber", "!", localName(r)).addTo(layers); pts.push([r.lat, r.lng]); }
+        else if (Math.abs(r.lng - donor.lng) < 0.1) pin(r, "small", null, localName(r)).addTo(layers);
+      });
       const route = rescue && rescue.route;
       if (route) {
         const path = [route.driver_start, route.pickup, ...route.stops].map((p) => [p.lat, p.lng]);
-        L.polyline(path, { color: COLORS.driver, weight: 4, opacity: 0.85, dashArray: "8 6" }).addTo(layers);
-        marker(route.driver_start, COLORS.driver, "Driver", 10).addTo(layers);
+        L.polyline(path, { color: "#21634b", weight: 5, opacity: 0.9, dashArray: dispatched() ? null : "8 8" }).addTo(layers);
+        pin(route.driver_start, "van", icon("truck", 18), "Driver").addTo(layers);
+        pts.push([route.driver_start.lat, route.driver_start.lng]);
       }
-      if (!drawMap.fitted) {
-        map.fitBounds(pts.filter((p) => Math.abs(p[1] - 55.23) < 0.08), { padding: [24, 24] });
-        drawMap.fitted = true;
+      lastPts = pts;
+      map.fitBounds(pts, { padding: [48, 48], maxZoom: 14, animate: false });
+      const cap = $("map-cap");
+      cap.replaceChildren(route ? (dispatched() ? t("cap_route") : t("cap_proposed")) : t("cap_candidates"), el("span", {}, ` · ${route && !dispatched() ? t("not_dispatched") : t("demo_locations")}`));
+    }
+
+    // Allocation rows: latest offer per recipient, in the order offers went out.
+    function allocationRows() {
+      if (!rescue) return [];
+      const stops = (rescue.route && rescue.route.stops) || [];
+      return latestOffers().map((o) => {
+        const stop = stops.find((s) => s.id === o.recipient_id);
+        let state = o.status === "pending" ? "pending" : o.status;
+        if (stop) state = stop.status === "received" ? "received" : stop.status === "delivered" ? "delivered" : "accepted";
+        const prior = [...offers.values()].filter((x) => x.recipient_id === o.recipient_id && x.id !== o.id);
+        return { id: o.recipient_id, portions: o.portions, prior: prior.length ? prior[0].portions : null, state, stop };
+      });
+    }
+
+    // Render -------------------------------------------------------------------
+    function render() {
+      if (!world) return;
+      renderHero(); renderBanner(); renderStrip(); renderSurplus(); renderAllocation(); drawMap(); renderDriver(); renderQR(); renderActivity(); renderImpact();
+      $("reset").replaceChildren(icon("rotate-ccw", 18), t("reset"));
+    }
+
+    function renderHero() {
+      const n = (rescue && rescue.facts && rescue.facts.portions) || 0;
+      let h = t("waiting_h"), sub = t("waiting_sub");
+      if (rescue) {
+        sub = [`${t("rescue")} `, ltr(rescue.id), ` · ${t("kitchen_city")}`];
+        const s = rescue.status;
+        if (s === "completed") h = tf("completed_h", rescue.impact ? rescue.impact.meals : n);
+        else if (dispatched()) h = tf("dispatched_h", placed(), rescue.route.stops.length);
+        else if (s === "expired") h = t("expired_h");
+        else if (s === "failed") h = t("failed_h");
+        else if (gateBlocked()) h = t("paused_h");
+        else if (s === "waiting_donor") h = t("question_h");
+        else if (["received", "intake"].includes(s) || !rescue.facts) h = t("reading_h");
+        else if ((rescue.declined || []).length) h = t("replan_h");
+        else h = tf("finding_h", n);
       }
+      $("headline").textContent = h;
+      $("subline").replaceChildren(...[sub].flat());
+      const label = !rescue ? t("t_progress") : rescue.status === "completed" ? t("t_done") : dispatched() ? t("t_driver") : ["expired", "failed"].includes(rescue.status) ? t("t_stopped") : t("t_progress");
+      $("timer-label").textContent = label;
+      $("timer-icon").replaceChildren(icon(dispatched() ? "truck" : "clock", 44));
+      tick();
     }
 
-    function hhmm(ts) { return new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }).slice(0, 8); }
-
-    function addTrace(e) {
-      traceEl.querySelector(".empty")?.remove();
-      const isAI = e.actor.startsWith("AI");
-      const cls = ["line", e.step === "reasoning" ? "reasoning" : "", e.status !== "ok" ? e.status : ""].join(" ");
-      const row = el("div", { class: cls },
-        el("span", { class: "when" }, e.clock || hhmm(e.ts)),
-        el("span", {}, el("span", { class: `badge ${isAI ? "ai" : "code"}` }, e.actor)),
-        el("span", { class: "step" }, e.step === "reasoning" ? "thinking" : e.step),
-        el("span", { class: "summary" }, e.summary));
-      traceEl.append(row);
-      traceEl.scrollTop = traceEl.scrollHeight;
+    function tick() {
+      if (!rescue) { $("timer").textContent = "00:00"; return; }
+      const end = rescue.dispatched_ts || (["expired", "failed"].includes(rescue.status) ? rescue.created_ts : Date.now() / 1000);
+      $("timer").textContent = clockText(end - rescue.created_ts);
     }
 
-    function fmtTime(iso) { return iso ? iso.slice(11, 16) : "--:--"; }
-    function clockText(seconds) { const s = Math.max(0, Math.round(seconds)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
-
-    function tickTimer() {
-      if (!rescue) { document.getElementById("timer").textContent = "0:00"; return; }
-      const end = rescue.dispatched_ts || Date.now() / 1000;
-      document.getElementById("timer").textContent = clockText(end - rescue.created_ts);
+    function renderBanner() {
+      const b = $("banner");
+      let text = null;
+      if (rescue) {
+        const unsafe = rescue.route && rescue.route.stops.some((s) => s.unsafe);
+        if (unsafe) text = t("unsafe_banner");
+        else if (rescue.status === "expired") text = t("expired_banner");
+        else if (rescue.status === "failed") text = t("failed_banner");
+        else if (gateBlocked()) text = [el("strong", {}, t("paused_banner")), " ", el("span", { dir: "auto" }, lastGate().summary.replace("Safety gate BLOCKED dispatch: ", ""))];
+        else if (!dispatched() && (rescue.declined || []).length) text = tf("declined_banner", localName(rec(rescue.declined[rescue.declined.length - 1])));
+      }
+      b.replaceChildren(...(text ? [el("div", { class: "notice amber", role: "status" }, el("span", { class: "bubble-icon amber", style: "background:var(--amber-ink);color:#fff" }, icon("triangle-alert", 22)), el("div", { class: "grow", style: "font-size:1.2rem;font-weight:700" }, text))] : []));
     }
 
-    const STATUS_TONE = { dispatched: "good", delivering: "good", completed: "good", expired: "bad", failed: "bad", waiting_donor: "warn", offering: "warn" };
-
-    function renderRescue() {
-      const statusEl = document.getElementById("status");
-      if (!rescue) { statusEl.textContent = "idle"; statusEl.className = "badge"; return; }
-      statusEl.textContent = rescue.status.replace("_", " ");
-      statusEl.className = `badge ${STATUS_TONE[rescue.status] || ""}`;
-      document.getElementById("tools").textContent = rescue.tool_calls || 0;
-      const f = rescue.facts;
+    function renderStrip() {
+      const f = rescue && rescue.facts;
       const total = (f && f.portions) || 0;
-      const placed = Object.values(rescue.accepted || {}).reduce((a, b) => a + b, 0);
-      document.getElementById("placed").textContent = `${placed}/${total}`;
-      document.getElementById("serveby").textContent = rescue.safety ? fmtTime(rescue.safety.safe_until) : "--:--";
-      const body = document.getElementById("rescue-body");
-      body.replaceChildren();
-      body.classList.remove("muted");
-      body.append(el("div", {}, `"${rescue.note}"`, ...(rescue.replies || []).map((r) => ` + "${r}"`)));
-      if (f) {
-        const chips = el("div", { class: "facts-line" },
-          el("span", { class: "badge" }, `${f.portions ?? "?"} × ${f.dish}`),
-          el("span", { class: f.allergens.length ? "badge warn" : "badge" }, `allergens: ${f.allergens.join(", ") || "none"}`),
-          el("span", { class: "badge" }, f.halal ? "halal" : "not halal"),
-          el("span", { class: "badge" }, f.storage),
-          f.prepared_at ? el("span", { class: "badge" }, `cooked ${fmtTime(f.prepared_at)}`) : null,
-          rescue.safety ? el("span", { class: `badge ${rescue.safety.urgency === "EXPIRED" ? "bad" : "warn"}` }, `urgency ${rescue.safety.urgency}`) : null);
-        body.append(chips);
-        if (rescue.safety && rescue.safety.rule) body.append(el("div", { class: "muted", style: "margin-block-start:6px" }, `Rule: ${rescue.safety.rule}`));
+      const cells = [];
+      cells.push(el("div", { class: "cell" }, el("span", { class: "bubble-icon" }, icon("utensils", 22)),
+        f ? el("div", {}, el("span", { class: "big" }, dispatched() || placed() ? placed() : total), " ", el("span", { class: "muted" }, dispatched() || placed() ? t("allocated") : t("available")))
+          : el("span", { class: "muted" }, rescue ? t("reading") : "—")));
+      cells.push(el("div", { class: "cell" }, el("span", { class: "bubble-icon" }, icon("clock", 22)),
+        rescue && rescue.safety ? el("div", {}, `${t("serve_by")} `, el("span", { class: "big" }, ltr(hhmm(rescue.safety.safe_until))), " ", el("span", { class: "demo-rule" }, t("demo_rule")))
+          : el("span", { class: "muted" }, t("serve_pending"))));
+      let st = ["ellipsis", t("waiting_replies"), ""];
+      if (!rescue || !rescue.safety) st = ["ellipsis", "—", ""];
+      if (rescue && rescue.status === "expired") st = ["triangle-alert", t("expired"), "amber"];
+      else if (gateBlocked()) st = ["ban", t("paused"), "amber"];
+      else if (dispatched()) st = ["check", t("checks_passed"), ""];
+      cells.push(el("div", { class: "cell" }, el("span", { class: `bubble-icon ${st[2]}` }, icon(st[0], 22)), el("strong", { style: "font-size:1.2rem" }, st[1])));
+      $("strip").replaceChildren(...cells);
+    }
+
+    function renderSurplus() {
+      const box = $("surplus");
+      const f = rescue && rescue.facts;
+      if (!f) { box.replaceChildren(el("h2", {}, t("the_surplus")), el("p", { class: "muted" }, t("no_surplus"))); return; }
+      const img = foodPhoto(rescue.id, { class: "food-photo", alt: `Photo of ${f.dish}` }, () => el("div", { class: "food-ph" }, icon("utensils", 40)));
+      box.replaceChildren(el("h2", {}, t("the_surplus")), el("div", { class: "facts" }, img,
+        el("h3", { style: "font-size:1.3rem" }, cap(dishName(f))), el("span", { class: "muted" }, `${f.portions ?? "?"} ${t("portions")}`),
+        el("div", {}, el("span", { class: "chip amber" }, icon("triangle-alert", 18), cap(allergenText(f.allergens)))),
+        el("span", { class: "muted small" }, f.prepared_at ? [`${t("prepared")} `, ltr(hhmm(f.prepared_at)), " · "] : "", t(`storage_${f.storage}`))));
+    }
+
+    function renderAllocation() {
+      const box = $("allocation");
+      const rows = allocationRows();
+      const title = dispatched() ? t("confirmed_dest") : t("proposed");
+      const body = [el("h2", {}, title)];
+      if (!rows.length) body.push(el("p", { class: "muted", style: "margin-block-start:10px" }, t("no_alloc")));
+      rows.forEach((r, i) => {
+        const tone = { pending: ["chip amber", "clock", t("awaiting")], accepted: ["chip", "check", t("accepted")], declined: ["chip grey", "circle-x", t("declined")],
+          expired: ["chip grey", "clock", t("no_reply")], delivered: ["chip", "truck", t("delivered")], received: ["chip", "circle-check", t("received")] }[r.state];
+        const out = r.state === "declined" || r.state === "expired";
+        body.push(el("div", { class: "alloc-row" }, el("span", { class: `stepnum ${out ? "grey" : ""}` }, out ? icon("x", 16) : String(i + 1)),
+          el("div", { class: "grow" }, el("strong", {}, localName(rec(r.id))),
+            el("span", { class: "muted small" }, r.prior && r.prior !== r.portions ? [el("span", { class: "strike" }, r.prior), " → "] : "", out ? `0 ${t("portions")}` : `${r.portions} ${t("portions")}`),
+            el("span", { class: tone[0] }, icon(tone[1], 16), tone[2])),
+          r.stop ? el("span", { class: "eta" }, `${t("eta")} `, el("b", {}, ltr(r.stop.eta_hhmm))) : null));
+      });
+      const excluded = rescue && rescue.dietary ? Object.entries(rescue.dietary).filter(([, v]) => !v.ok) : [];
+      excluded.forEach(([id, v]) => body.push(el("div", { class: "notice amber", style: "margin-block-start:12px" }, icon("triangle-alert", 22),
+        el("div", { class: "grow" }, el("strong", {}, tf("excluded", localName(rec(id)))), el("p", { class: "small", dir: "auto" }, (v.reasons || []).join("; "))))));
+      if (rescue && rescue.facts && rows.length) {
+        const total = rescue.facts.portions || 0, p = placed();
+        const allIn = rows.every((r) => ["accepted", "delivered", "received", "declined", "expired"].includes(r.state));
+        body.push(el("div", { class: `notice ${p >= total ? "" : "grey"}`, style: "margin-block-start:12px" },
+          el("span", { class: "bubble-icon" }, icon(p >= total ? "check" : "ellipsis", 20)),
+          el("div", { class: "grow" }, el("strong", {}, p >= total ? t("none_left") : tf("placed_line", p, total)),
+            el("p", { class: "muted small" }, allIn ? t("all_confirmed") : t("pending_confirm")))));
       }
-      if (rescue.route) {
-        const d = world.drivers.find((x) => x.id === rescue.route.driver_id);
-        body.append(el("div", { style: "margin-block-start:8px" },
-          el("strong", {}, `${d ? d.name + " (" + d.driver + ")" : rescue.route.driver_id}: `),
-          `pickup ${rescue.route.pickup.eta_hhmm}` + rescue.route.stops.map((s) => `, ${s.name} ${s.eta_hhmm} (${s.status})`).join("")));
-      }
-      tickTimer();
+      box.replaceChildren(...body);
     }
 
-    function renderOffers() {
-      const wrap = document.getElementById("offers");
-      wrap.replaceChildren();
-      if (!offers.size) { wrap.append(el("div", { class: "muted" }, "None yet.")); return; }
-      const names = Object.fromEntries(world.recipients.map((r) => [r.id, r.name]));
-      const tone = { pending: "warn", accepted: "good", declined: "bad", expired: "" };
-      for (const o of offers.values()) {
-        wrap.append(el("div", { class: "offer-row" },
-          el("span", {}, `${names[o.recipient_id] || o.recipient_id} · ${o.portions}`),
-          el("span", { class: `badge ${tone[o.status] || ""}` }, o.status + (o.simulated ? " (sim)" : ""))));
+    function renderDriver() {
+      const bar = $("driverbar");
+      const route = rescue && rescue.route;
+      if (route && dispatched()) {
+        const d = world.drivers.find((x) => x.id === route.driver_id) || {};
+        bar.replaceChildren(el("span", { class: "bubble-icon" }, icon("car-front", 22)),
+          el("div", { class: "grow" }, el("strong", {}, ltr(d.name || route.driver_id)), el("span", { class: "muted" }, `${t("pickup_at")} `, ltr(route.pickup.eta_hhmm), ` · ${d.driver || ""}`)),
+          el("span", { class: "chip" }, icon("check", 16), t("confirmed")));
+      } else {
+        bar.replaceChildren(el("span", { class: "bubble-icon" }, icon("truck", 22)),
+          el("div", { class: "grow" }, el("strong", {}, t("driver_pending")), el("span", { class: "muted" }, t("driver_pending_hint"))));
       }
     }
 
-    function renderImpact(impact) {
-      const card = document.getElementById("impact-card");
-      if (!impact) { card.classList.add("hidden"); return; }
-      card.classList.remove("hidden");
-      document.getElementById("meals").textContent = impact.meals;
-      document.getElementById("kg").textContent = impact.kg;
-      document.getElementById("co2").textContent = impact.co2e_kg;
-      document.getElementById("co2-source").textContent = `CO2e factor: ${impact.co2e_source}`;
+    function renderQR() {
+      const card = $("qr-card");
+      const show = !rescue || ["received", "intake", "waiting_donor", "matching", "offering"].includes(rescue.status);
+      card.classList.toggle("hidden", !show);
+      if (!show) return;
+      card.replaceChildren(el("h2", {}, t("try_view")), el("p", { class: "muted", style: "margin-block:4px 12px" }, t("try_hint")),
+        el("div", { class: "qr" }, el("img", { src: `/api/qr.svg?url=${encodeURIComponent(judgeUrl)}`, alt: "QR code for the Family shelter offer" }),
+          el("div", { class: "grow" }, el("a", { class: "btn primary small", href: judgeUrl, target: "_blank", rel: "noopener" }, icon("external-link", 18), t("open_offer")),
+            el("span", { class: "muted small", dir: "ltr", style: "overflow-wrap:anywhere" }, judgeUrl))));
     }
 
-    function resetView() {
-      rescue = null; offers.clear();
-      traceEl.replaceChildren(el("div", { class: "empty" }, "Waiting for a kitchen to report surplus food…"));
-      document.getElementById("rescue-body").textContent = "No rescue yet.";
-      document.getElementById("rescue-body").classList.add("muted");
-      ["tools"].forEach((id) => { document.getElementById(id).textContent = "0"; });
-      document.getElementById("placed").textContent = "0/0";
-      document.getElementById("serveby").textContent = "--:--";
-      renderRescue(); renderOffers(); renderImpact(null); drawMap();
+    function activityItems() {
+      const items = [];
+      for (const e of traces) {
+        if (e.step === "reasoning") continue;
+        let key = e.step;
+        if (e.step === "send_offers") key = e.summary.startsWith("Offers sent") ? "offers_sent" : e.summary.startsWith("Refused") ? "offers_refused" : e.status === "ok" ? "offers_ok" : "offers_decline";
+        if (e.step === "error" && e.status === "warn") key = "error";
+        const labels = STEP_LABELS[key];
+        if (!labels) continue;
+        const bad = e.status !== "ok";
+        const pair = (bad && labels[1]) || labels[0];
+        items.push({ label: pair[AR() ? 1 : 0], time: (e.clock || "").slice(0, 5), status: e.status, detail: bad ? e.summary : null });
+      }
+      return items;
     }
 
+    function renderActivity() {
+      const box = $("activity");
+      const items = activityItems();
+      const running = rescue && !["completed", "expired", "failed"].includes(rescue.status);
+      const list = el("ol", { class: "timeline" }, items.slice(-8).map((it) => el("li", {},
+        el("span", { class: `dot ${it.status === "ok" ? "" : "warn"}` }, icon(it.status === "ok" ? "check" : "triangle-alert", 16)),
+        el("div", { class: "what" }, el("strong", {}, it.label), it.detail ? el("span", { dir: "auto" }, it.detail) : null), ltr(it.time))));
+      if (running && rescue.status === "offering") list.append(el("li", {}, el("span", { class: "dot wait" }, icon("clock", 16)), el("div", { class: "what" }, el("strong", {}, t("waiting_replies")))));
+      const toggle = el("button", { class: "linkbtn", type: "button", "aria-expanded": String(showTools), onclick: () => {
+        showTools = !showTools; try { localStorage.setItem("plentli-tools", showTools ? "1" : "0"); } catch {} renderActivity(); } },
+        showTools ? t("hide_details") : t("tool_details"), icon(showTools ? "minus" : (AR() ? "arrow-left" : "chevron-right"), 18));
+      const children = [el("div", { class: "card-head" }, el("h2", {}, t("activity")), running ? el("span", { class: "demo-pill live-pill" }, t("live")) : null),
+        items.length ? list : el("p", { class: "muted", style: "margin-block-start:10px" }, t("no_activity")), toggle];
+      if (showTools) children.push(el("div", { class: "trace", dir: "ltr" }, traces.map((e) => el("div", { class: `line ${e.step === "reasoning" ? "reasoning" : ""} ${e.status !== "ok" ? e.status : ""}` },
+        el("span", {}, el("span", { class: `badge ${e.actor.startsWith("AI") ? "ai" : "code"}` }, e.actor), " ", el("span", { class: "step" }, e.step === "reasoning" ? "thinking" : e.step)),
+        el("span", { class: "muted small", style: "text-align:end" }, e.clock || ""), el("span", { class: "summary" }, e.summary)))));
+      box.replaceChildren(...children);
+    }
+
+    function renderImpact() {
+      const box = $("impact");
+      const imp = rescue && rescue.impact;
+      if (!imp) {
+        box.replaceChildren(el("section", { class: "hero" }, el("div", {}, el("h1", {}, t("impact_wait_h")), el("p", { class: "sub" }, t("impact_wait_sub")))));
+        return;
+      }
+      const f = rescue.facts;
+      const stops = rescue.route.stops;
+      const secs = imp.seconds_to_dispatch;
+      box.replaceChildren(
+        el("section", { class: "hero" }, el("div", {}, el("h1", {}, tf("completed_h", imp.meals)), el("p", { class: "sub" }, `${t("rescue")} `, ltr(rescue.id), ` · ${t("impact_sub_done")}`))),
+        el("section", { class: "tiles" },
+          el("div", { class: "tile dark" }, el("span", { class: "bubble-icon big" }, icon("utensils", 40)), el("div", {}, el("div", { class: "v" }, imp.meals), el("div", { class: "k" }, t("meals_received")))),
+          el("div", { class: "tile" }, el("span", { class: "bubble-icon big" }, icon("users", 40)), el("div", {}, el("div", { class: "v" }, imp.recipients ?? stops.length), el("div", { class: "k" }, t("orgs")))),
+          el("div", { class: "tile" }, el("span", { class: "bubble-icon big" }, icon("clock", 40)), el("div", {}, el("div", { class: "v" }, secs != null ? clockText(secs) : "—"), el("div", { class: "k" }, t("time_to_driver"))))),
+        el("section", { class: "impact-grid" },
+          el("div", { class: "card" }, el("h2", {}, t("handover_records")),
+            el("div", { class: "table-wrap" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, t("h_recipient")), el("th", {}, t("h_meals")), el("th", {}, t("h_received")), el("th", {}, t("h_status")))),
+              el("tbody", {}, stops.map((s) => el("tr", {}, el("td", {}, localName(s)), el("td", {}, s.portions), el("td", {}, ltr(s.received_at || "—")),
+                el("td", {}, s.status === "received" && !s.unsafe ? el("span", { class: "chip" }, icon("circle-check", 16), t("confirmed")) : el("span", { class: "chip amber" }, icon("triangle-alert", 16), s.unsafe ? t("expired") : t("awaiting")))))))),
+            el("div", { class: "row", style: "margin-block-start:12px" }, el("span", { class: "bubble-icon big" }, icon("utensils", 36)),
+              el("div", { class: "grow" }, el("div", { style: "display:flex;gap:12px;flex-wrap:wrap;align-items:center" }, el("h3", { style: "font-size:1.3rem" }, cap(dishName(f))), el("span", { class: "chip amber" }, icon("triangle-alert", 16), cap(allergenText(f.allergens)))),
+                el("span", { class: "muted" }, `${t("serve_by")} `, ltr(imp.safe_until), ` · ${t("demo_rule")}`))),
+            el("p", { class: "muted small" }, t("recorded_after"))),
+          el("div", { class: "stack" },
+            el("div", { class: "card" }, el("h2", {}, t("env")),
+              el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("leaf", 20)), el("span", { class: "grow" }, t("food_weight")), el("span", { class: "muted" }, imp.kg != null ? `${imp.kg} kg` : t("not_calculated"))),
+              el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("cloud", 20)), el("span", { class: "grow" }, t("co2e")), el("span", { class: "muted" }, imp.co2e_kg != null ? `${imp.co2e_kg} kg` : t("not_calculated"))),
+              el("p", { class: "muted small", style: "display:flex;gap:8px;align-items:center" }, icon("info", 16), imp.kg != null ? (imp.co2e_source || "") : t("env_note"))),
+            el("div", { class: "tagline-card" }, el("p", { dir: "ltr" }, "Good food.", el("br"), "More people."), el("div", { class: "rings" }, el("span", {}, icon("utensils", 32)), el("span", {}, icon("utensils", 32)))))));
+    }
+
+    // View switching: Live rescue and Impact share this page.
+    function applyView() {
+      const impact = location.hash === "#impact";
+      $("live").classList.toggle("hidden", impact);
+      $("impact").classList.toggle("hidden", !impact);
+      setNavCurrent(impact ? "impact" : "live");
+      if (!impact && map) setTimeout(() => { map.invalidateSize(); drawMap(); }, 50);
+    }
+
+    // Events -------------------------------------------------------------------
     function onEvent(e) {
-      if (e.kind === "reset") return resetView();
-      if (e.kind === "trace") addTrace(e);
-      else if (e.kind === "warning") addTrace({ ...e, actor: "CODE", step: "warning", summary: e.text, status: "warn" });
+      if (e.kind === "reset") { rescue = null; offers.clear(); traces = []; render(); return; }
+      if (e.rescue_id && rescue && e.rescue_id !== rescue.id && e.kind !== "rescue") return;
+      if (e.kind === "trace") { if (!rescue || e.rescue_id === rescue.id || !rescue) traces.push(e); }
+      else if (e.kind === "warning") traces.push({ ...e, actor: "CODE", step: "warning", summary: e.text, status: "warn" });
       else if (e.kind === "rescue") {
-        if (!rescue || rescue.id !== e.rescue.id) { offers.clear(); renderImpact(null); }
-        rescue = e.rescue; renderRescue(); drawMap();
-        if (rescue.impact) renderImpact(rescue.impact);
-      } else if (e.kind === "offer") { offers.set(e.offer.id, e.offer); renderOffers(); drawMap(); }
-      else if (e.kind === "impact") renderImpact(e.impact);
+        if (!rescue || rescue.id !== e.rescue.id) { offers.clear(); traces = traces.filter((x) => x.rescue_id === e.rescue.id); }
+        rescue = e.rescue;
+      } else if (e.kind === "offer") offers.set(e.offer.id, e.offer);
+      else if (e.kind === "impact") { if (rescue) rescue.impact = e.impact; }
+      else return;
+      scheduleRender();
     }
+    let pending = false;
+    function scheduleRender() { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; render(); }); }
 
-    async function boot() {
+    (async () => {
+      mountHeader({ nav: "live" });
+      mountFooter();
       const [cfg, state] = await Promise.all([api("/api/config"), api("/api/state")]);
       world = state;
-      document.getElementById("mode").textContent =
-        `${cfg.agent_mode === "bedrock" ? "Bedrock · " + cfg.model : "mock planner (no AWS)"} · store ${cfg.store} · routing ${cfg.routing} · Dubai ${cfg.now}`;
-      const base = cfg.public_base_url || location.origin;
-      const judgeUrl = `${base}/coordinator?r=r3`;
-      document.getElementById("judge-link").href = judgeUrl;
-      document.getElementById("qrcode").src = `/api/qr.svg?url=${encodeURIComponent(judgeUrl)}`;
-      initMap(); drawMap();
+      judgeUrl = `${cfg.public_base_url || location.origin}/coordinator?r=r3`;
+      initMap();
+      applyView();
+      render();
+      window.addEventListener("hashchange", applyView);
+      document.addEventListener("langchange", render);
+      $("reset").addEventListener("click", async () => { await postJSON("/api/reset", {}); alertUser(t("reset_done")); });
       listen("ops", onEvent);
-      timerHandle = setInterval(tickTimer, 500);
-    }
-
-    document.getElementById("reset").addEventListener("click", async () => {
-      await postJSON("/api/reset", {});
-    });
-
-    boot();
+      setInterval(tick, 500);
+    })();
   </script>
 </body>
 </html>

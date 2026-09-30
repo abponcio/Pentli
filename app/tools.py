@@ -106,7 +106,9 @@ def get_safe_window(rescue_id: str) -> dict:
         notify.send(donor_key, messages.donor_expired(fmt), rescue_id, sender="plenty")
         events.trace(rescue_id, "get_safe_window", "CODE", f"Past safe window ({clock.fmt(win['safe_until'])}). Rescue stopped.", out, "blocked")
     else:
-        notify.send(donor_key, messages.donor_ack(fmt), rescue_id, sender="plenty")
+        notify.send(donor_key, messages.donor_ack(fmt), rescue_id, sender="plenty", card={
+            "type": "surplus", "portions": facts["portions"], "dish": facts["dish"], "dish_ar": facts["dish_ar"],
+            "allergens": facts["allergens"], "safe_until": clock.fmt(win["safe_until"])})
         events.trace(
             rescue_id, "get_safe_window", "CODE",
             f"Serve by {clock.fmt(win['safe_until'])}, deliver by {clock.fmt(win['deliver_by'])}. Urgency {win['urgency']}.", out,
@@ -262,6 +264,7 @@ def send_offers(rescue_id: str, allocation: dict[str, int]) -> dict:
             "rescue_id": rescue_id, "recipient_id": rid, "portions": portions, "status": "pending",
             "dish": facts["dish"], "dish_ar": facts["dish_ar"], "allergens": facts["allergens"],
             "eta": clock.fmt(eta), "safe_until": safe_until, "created_at": clock.now().isoformat(),
+            "expires_at_ts": time.time() + config.OFFER_TIMEOUT_SECONDS,
         }
         store.put("offer", offer)
         offer_ids.append(offer["id"])
@@ -287,7 +290,8 @@ def send_offers(rescue_id: str, allocation: dict[str, int]) -> dict:
     for oid in offer_ids:
         offer = store.get("offer", oid)
         if offer["status"] == "pending":
-            store.update("offer", oid, status="expired")
+            offer = store.update("offer", oid, status="expired")
+            events.emit("offer", rescue_id, ["ops", f"recipient:{offer['recipient_id']}"], offer=offer)
             timed_out.append(offer["recipient_id"])
         elif offer["status"] == "accepted":
             accepted[offer["recipient_id"]] = offer["portions"]
@@ -441,7 +445,10 @@ def dispatch_and_notify(rescue_id: str) -> dict:
             "safe_until": safe_until}), rescue_id, sender="plenty", stop=s)
     notify.send(f"kitchen:{donor['id']}", messages.donor_dispatched({
         "driver": f"{driver['name']} ({driver['driver']})", "pickup_eta": route["pickup"]["eta_hhmm"],
-        "count": len(route["stops"]), "stops_en": stops_en, "stops_ar": stops_ar}), rescue_id, sender="plenty")
+        "count": len(route["stops"]), "stops_en": stops_en, "stops_ar": stops_ar}), rescue_id, sender="plenty", card={
+            "type": "pickup", "pickup_eta": route["pickup"]["eta_hhmm"], "driver": driver["name"],
+            "stops": [{"name": s["name"], "name_ar": s["name_ar"], "portions": s["portions"], "eta": s["eta_hhmm"]}
+                      for s in route["stops"]]})
     elapsed = time.time() - rescue["created_ts"]
     events.trace(rescue_id, "dispatch_and_notify", "CODE",
                  f"Safety gate passed. {driver['name']} dispatched; {len(route['stops']) + 2} people notified. "
@@ -483,6 +490,7 @@ def mark_stop(rescue_id: str, stop_id: str, action: str) -> dict:
             stop["status"] = "received"
             stop["received_at"] = clock.fmt(now)
             events.trace(rescue_id, "handover", "CODE", f"{stop['name']} confirmed receipt of {stop['portions']} portions.")
+            events.emit("received", rescue_id, [f"recipient:{stop_id}"], stop=stop)
         store.update("rescue", rescue_id, route=route)
     _ops_update(rescue_id)
     events.emit("job", rescue_id, [f"driver:{route['driver_id']}"], route=route)
@@ -492,15 +500,18 @@ def mark_stop(rescue_id: str, stop_id: str, action: str) -> dict:
 
 
 def record_impact(rescue_id: str) -> dict:
-    """Log the handover record and add meals, kg and CO2e to the donor's totals."""
+    """Log the handover record. Weight and CO2e stay "not calculated" until IMPACT_FACTORS_VERIFIED is set,
+    because the per-portion weight and emissions factor need a measured basis and a cited source."""
     rescue = _rescue(rescue_id)
     if rescue.get("impact"):
         return rescue["impact"]
     stops = [s for s in rescue["route"]["stops"] if s["status"] == "received" and not s.get("unsafe")]
     meals = sum(s["portions"] for s in stops)
-    kg = round(meals * config.KG_PER_PORTION, 1)
+    kg = round(meals * config.KG_PER_PORTION, 1) if config.IMPACT_FACTORS_VERIFIED else None
     impact = {
-        "meals": meals, "kg": kg, "co2e_kg": round(kg * config.CO2E_PER_KG_FOOD, 1), "co2e_source": config.CO2E_SOURCE,
+        "meals": meals, "kg": kg, "co2e_kg": round(kg * config.CO2E_PER_KG_FOOD, 1) if kg is not None else None,
+        "co2e_source": config.CO2E_SOURCE if kg is not None else None,
+        "recipients": len(stops),
         "handover": [{"recipient": s["name"], "portions": s["portions"], "delivered_at": s.get("delivered_at"),
                       "received_at": s.get("received_at")} for s in stops],
         "dish": rescue["facts"]["dish"], "allergens": rescue["facts"]["allergens"],
@@ -509,8 +520,10 @@ def record_impact(rescue_id: str) -> dict:
     }
     store.update("rescue", rescue_id, impact=impact, status="completed")
     store.put("impact", {"id": rescue_id, "donor_id": rescue["donor_id"], **impact})
-    notify.send(f"kitchen:{rescue['donor_id']}", messages.impact_note(impact), rescue_id, sender="plenty")
-    events.trace(rescue_id, "record_impact", "CODE", f"{meals} meals, {kg} kg food, {impact['co2e_kg']} kg CO2e. Handover record saved.", impact)
+    notify.send(f"kitchen:{rescue['donor_id']}", messages.impact_note(impact), rescue_id, sender="plenty",
+                card={"type": "impact", "meals": meals, "recipients": len(stops)})
+    weight = f"{kg} kg food, {impact['co2e_kg']} kg CO2e" if kg is not None else "weight and CO2e not calculated"
+    events.trace(rescue_id, "record_impact", "CODE", f"{meals} meals received by {len(stops)} organisations ({weight}). Handover record saved.", impact)
     events.emit("impact", rescue_id, ["ops"], impact=impact)
     _ops_update(rescue_id)
     return impact

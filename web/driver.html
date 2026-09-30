@@ -3,107 +3,122 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f7a4d">
-  <title>Plenty · Driver</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>Plentli · Driver message</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/app.css">
+  <style>
+    body { background: var(--white); }
+    .screen { display: grid; gap: 16px; }
+    .sim { justify-self: start; }
+    .job { display: grid; gap: 14px; }
+    .van { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; }
+    .pickup-box { display: flex; gap: 14px; padding: 16px; border-radius: 12px; background: var(--ivory); }
+    .pickup-box .when { font-family: var(--font-display); font-weight: 800; font-size: 2.4rem; line-height: 1; }
+    .stops { list-style: none; margin: 0; padding: 0; }
+    .stops li { display: flex; gap: 14px; align-items: center; padding-block: 12px; position: relative; }
+    .stops li + li { border-block-start: 1px solid var(--border); }
+    .stops .grow { flex: 1; min-inline-size: 0; }
+    .stops .done .stepnum { background: var(--green); }
+    .warn-strip > span:not(.demo-rule) { flex: 1; min-inline-size: 0; }
+    .warn-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--amber); color: var(--amber-ink); font-weight: 600; }
+  </style>
 </head>
 <body>
-  <header class="app-bar">
-    <div class="avatar" aria-hidden="true">🚐</div>
-    <div>
-      <div class="title" id="van">Plenty</div>
-      <div class="sub" id="who"></div>
-    </div>
-    <div class="spacer"></div>
-    <button class="lang-toggle" type="button" data-t="switch">عربي</button>
-  </header>
-
-  <main class="wrap">
-    <button class="btn block" type="button" id="alerts" data-t="alerts_on">Turn on alerts</button>
-    <div id="job" style="margin-block-start:12px"></div>
-    <div class="empty" id="idle" data-t="driver_idle">No job yet.</div>
-  </main>
+  <main class="narrow" id="main"></main>
   <div class="toast" id="toast" role="status" hidden></div>
-
+  <script src="/static/icons.js"></script>
   <script src="/static/app.js"></script>
   <script>
-    Object.assign(STRINGS.en, { deliver_to: "Drop off", all_done: "All drops done. Thank you!", cold_box: "Keep in the cold box", eta: "ETA" });
-    Object.assign(STRINGS.ar, { deliver_to: "التوصيل", all_done: "تم كل التوصيلات. شكراً لك!", cold_box: "يُحفظ في الصندوق المبرد", eta: "الوصول" });
+    addStrings({
+      driver_message: "Driver message", simulated: "Simulated notification", idle: "No pickup yet", idle_hint: "New pickups appear here as a message.",
+      open_map: "Open route map", mark_picked: "Mark picked up", mark_delivered: (name) => `Mark delivered at ${name}`,
+      all_done: "All drops delivered. Thank you!", channel: "Message channel simulated", picked: "Picked up", delivered: "Delivered",
+      new_job: "New pickup",
+    }, {
+      driver_message: "رسالة السائق", simulated: "إشعار محاكى", idle: "لا توجد عملية استلام بعد", idle_hint: "ستظهر عمليات الاستلام الجديدة هنا كرسالة.",
+      open_map: "فتح خريطة المسار", mark_picked: "تأكيد الاستلام من المطبخ", mark_delivered: (name) => `تأكيد التوصيل إلى ${name}`,
+      all_done: "تم كل التوصيلات. شكراً لك!", channel: "قناة الرسائل محاكاة", picked: "تم الاستلام", delivered: "تم التوصيل",
+      new_job: "عملية استلام جديدة",
+    });
+    const tf = (key, ...args) => { const v = t(key); return typeof v === "function" ? v(...args) : v; };
 
     const DRIVER = new URLSearchParams(location.search).get("d") || "d1";
-    const jobEl = document.getElementById("job");
-    const idle = document.getElementById("idle");
-    let current = null; // {rescueId, route, texts}
+    const main = document.getElementById("main");
+    let me = null, job = null;   // job: { rescueId, route, texts, facts }
 
-    async function boot() {
-      const state = await api("/api/state");
-      const me = state.drivers.find((d) => d.id === DRIVER) || state.drivers[0];
-      document.getElementById("van").textContent = me.name;
-      document.getElementById("who").textContent = me.driver;
-      initAlertsButton(document.getElementById("alerts"));
-      document.addEventListener("langchange", render);
-      listen(`driver:${DRIVER}`, (e) => {
-        if (e.kind === "reset") { current = null; render(); return; }
-        if (e.kind === "message" && e.job) {
-          current = { rescueId: e.rescue_id, route: e.job.route, texts: e.texts };
-          alertUser(t("job"), pickText(e.texts), e);
-        } else if (e.kind === "job" && current && e.rescue_id === current.rescueId) {
-          current.route = e.route;
-        } else return;
-        render();
-      });
-    }
-
-    const mapsLink = (p) => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
-
-    async function act(action, stopId, button) {
-      button.disabled = true;
-      try {
-        const res = await postJSON("/api/stops", { rescue_id: current.rescueId, stop_id: stopId || "", action });
-        current.route = res.route; render();
-      } catch (err) { button.disabled = false; alertUser("Error", err.message); }
-    }
-
-    function stopRow(num, title, sub, done, doneLabel, actionLabel, onAct, place) {
-      return el("div", { class: "stop" },
-        el("div", { class: "num" }, done ? "✓" : String(num)),
-        el("div", { class: "body" },
-          el("strong", {}, title), el("div", { class: "muted" }, sub),
-          el("div", { class: "actions" },
-            el("a", { class: "btn", href: mapsLink(place), target: "_blank", rel: "noopener" }, t("navigate")),
-            done ? el("span", { class: "badge good", style: "align-self:center" }, doneLabel)
-                 : el("button", { class: "btn primary", type: "button", onclick: (ev) => onAct(ev.target) }, actionLabel))));
+    function mapsUrl(route) {
+      const pts = [route.pickup, ...route.stops];
+      const dest = pts[pts.length - 1];
+      const way = pts.slice(0, -1).map((p) => `${p.lat},${p.lng}`).join("|");
+      return `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&waypoints=${encodeURIComponent(way)}&travelmode=driving`;
     }
 
     function render() {
-      jobEl.replaceChildren();
-      idle.hidden = !!current;
-      if (!current) return;
-      const { route, texts } = current;
-      const total = route.stops.reduce((n, s) => n + s.portions, 0);
-      const pickedUp = route.pickup.status === "done";
-      const card = el("article", { class: "card" },
-        el("h2", {}, `${t("job")} · ${total} ${t("portions_short")}`),
-        el("p", { class: "muted" }, pickText(texts)),
-        texts.ur ? el("p", { class: "muted", dir: "rtl", lang: "ur" }, texts.ur) : null,
-        el("p", {}, el("span", { class: "badge warn" }, `❄ ${t("cold_box")}`)));
-      const stops = el("article", { class: "card" });
-      stops.append(stopRow(1, `${t("pickup")}: ${route.pickup.name || "HelloChef Kitchen, Al Quoz"}`,
-        `${t("eta")} ${route.pickup.eta_hhmm} · ${total} ${t("portions_short")}`,
-        pickedUp, t("picked_up"), t("mark_picked"), (b) => act("picked_up", "", b), route.pickup));
-      route.stops.forEach((s, i) => {
-        const done = s.status === "delivered" || s.status === "received";
-        const row = stopRow(i + 2, `${t("deliver_to")}: ${LANG === "ar" ? s.name_ar : s.name}`,
-          `${t("eta")} ${s.eta_hhmm} · ${s.portions} ${t("portions_short")}`,
-          done, t("delivered"), t("mark_delivered"), (b) => act("delivered", s.id, b), s);
-        if (!pickedUp && !done) row.querySelector("button")?.setAttribute("disabled", "");
-        stops.append(row);
-      });
-      jobEl.append(card, stops);
-      if (route.stops.every((s) => s.status !== "pending")) jobEl.append(el("div", { class: "card ok-banner" }, t("all_done")));
+      const screen = el("div", { class: "screen" },
+        el("h1", {}, t("driver_message")),
+        el("span", { class: "chip grey sim" }, icon("message-circle", 16), t("simulated")));
+      if (!job) {
+        screen.append(el("div", { class: "card", style: "text-align:center;display:grid;gap:8px;justify-items:center;padding-block:32px" },
+          el("span", { class: "bubble-icon big" }, icon("truck", 40)), el("h2", {}, t("idle")), el("p", { class: "muted" }, t("idle_hint")),
+          el("span", { class: "muted small" }, ltr(me ? me.name : ""))), alertsButton());
+      } else {
+        const r = job.route;
+        const picked = r.pickup.status === "done";
+        const next = r.stops.find((s) => s.status === "pending");
+        let action;
+        if (!picked) action = el("button", { class: "btn quiet block", type: "button", onclick: (ev) => act(ev, "picked_up", "") }, icon("circle-check", 22), t("mark_picked"));
+        else if (next) action = el("button", { class: "btn quiet block", type: "button", onclick: (ev) => act(ev, "delivered", next.id) }, icon("circle-check", 22), tf("mark_delivered", localName(next)));
+        else action = el("div", { class: "notice" }, icon("check", 22), el("strong", {}, t("all_done")));
+        screen.append(el("section", { class: "card job" },
+          el("div", { class: "van" }, el("span", { class: "bubble-icon" }, icon("car-front", 22)), ltr(me ? me.name : "")),
+          el("div", { class: "pickup-box" }, el("span", { class: "bubble-icon" }, icon("clock", 22)),
+            el("div", {}, el("span", { class: "muted small" }, picked ? t("picked") : t("pickup")), el("div", { class: "when" }, ltr(picked ? (r.pickup.done_at || r.pickup.eta_hhmm) : r.pickup.eta_hhmm)),
+              el("span", { class: "muted" }, ltr(r.pickup.name)))),
+          el("ol", { class: "stops" }, r.stops.map((s, i) => {
+            const done = s.status !== "pending";
+            return el("li", { class: done ? "done" : "" }, el("span", { class: "stepnum" }, done ? icon("check", 18) : String(i + 1)),
+              el("div", { class: "grow" }, el("strong", {}, localName(s)), el("div", { class: "muted" },
+                done ? [`${t("delivered")} `, ltr(s.delivered_at || "")] : [`${t("eta")} `, ltr(s.eta_hhmm)], ` · ${s.portions} ${t("meals")}`)));
+          })),
+          job.facts ? el("div", { class: "warn-strip" }, icon("triangle-alert", 20), el("span", {}, cap(allergenText(job.facts.allergens)), " · ", `${t("serve_by")} `, ltr(job.facts.safe_until)),
+            el("span", { class: "demo-rule" }, t("demo_rule"))) : null,
+          el("a", { class: "btn primary block", href: mapsUrl(r), target: "_blank", rel: "noopener" }, icon("map", 22), el("span", { class: "grow" }, t("open_map")), icon(AR() ? "arrow-left" : "chevron-right", 20)),
+          action,
+          el("p", { class: "muted small" }, icon("info", 16), " ", t("channel"))));
+      }
+      screen.append(el("p", { class: "hint" }, t("footer")));
+      main.replaceChildren(screen);
     }
 
-    boot();
+    async function act(ev, action, stopId) {
+      ev.currentTarget.disabled = true;
+      try { const res = await postJSON("/api/stops", { rescue_id: job.rescueId, stop_id: stopId, action }); job.route = res.route; render(); }
+      catch (err) { alertUser("Error", err.message); render(); }
+    }
+
+    (async () => {
+      mountHeader({ tagline: false });
+      const state = await api("/api/state");
+      me = state.drivers.find((d) => d.id === DRIVER) || state.drivers[0];
+      document.addEventListener("langchange", render);
+      render();
+      listen(`driver:${DRIVER}`, async (e) => {
+        if (e.kind === "reset") { job = null; render(); return; }
+        if (e.kind === "message" && e.job) {
+          job = { rescueId: e.rescue_id, route: e.job.route, texts: e.texts, facts: null };
+          try {
+            const s = await api("/api/state");
+            const rescue = s.rescues.find((x) => x.id === e.rescue_id);
+            if (rescue) job.facts = { allergens: rescue.facts.allergens, safe_until: rescue.safety.safe_until.slice(11, 16) };
+          } catch {}
+          alertUser(t("new_job"), pickText(e.texts), e);
+        } else if (e.kind === "job" && job && e.rescue_id === job.rescueId) job.route = e.route;
+        else return;
+        render();
+      });
+    })();
   </script>
 </body>
 </html>

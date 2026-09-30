@@ -105,7 +105,7 @@
   "drivers": [
     {
       "id": "d1",
-      "name": "HelloChef Van 14",
+      "name": "HelloChef van 03",
       "driver": "Imran",
       "kind": "returning_van",
       "status": "returning from JLT deliveries",
@@ -117,7 +117,7 @@
     },
     {
       "id": "d2",
-      "name": "HelloChef Van 07",
+      "name": "HelloChef van 07",
       "driver": "Joseph",
       "kind": "returning_van",
       "status": "returning from Downtown deliveries",
