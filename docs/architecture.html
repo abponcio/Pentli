@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Plentli architecture</title>
+<style>
+  :root { --forest:#163D32; --green:#21634B; --ink:#172D25; --muted:#56655D; --ivory:#F6F7F2; --sage:#E7EFE5; --amber:#FFF1D6; --amber-ink:#8A4B0F; --border:#DCE5DE; --aws:#FF9900; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink); font-family: Inter, "Helvetica Neue", Arial, sans-serif; }
+  .sheet { width:1600px; height:800px; padding:40px 48px; position:relative; }
+  h1 { margin:0; font-size:34px; color:var(--forest); letter-spacing:-0.02em; }
+  .sub { color:var(--muted); font-size:16px; margin:6px 0 0; }
+  .grid { display:grid; grid-template-columns: 250px 60px 1fr 60px 330px; margin-top:28px; align-items:stretch; }
+  .col { display:flex; flex-direction:column; gap:14px; }
+  .box { border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; background:#fff; }
+  .box h3 { margin:0 0 4px; font-size:16px; }
+  .box p { margin:0; font-size:13px; color:var(--muted); line-height:1.35; }
+  .screen { background:var(--ivory); }
+  .aws { border:2px dashed var(--aws); border-radius:18px; padding:16px 18px 18px; position:relative; }
+  .aws .tag { position:absolute; top:-12px; left:18px; background:#fff; padding:0 8px; font-weight:700; color:#B36B00; font-size:13px; }
+  .lambda { border:2px solid var(--green); border-radius:16px; padding:14px 16px; background:var(--sage); }
+  .lambda > h3 { margin:0 0 10px; font-size:17px; color:var(--forest); }
+  .row { display:flex; gap:12px; }
+  .row > .box { flex:1; }
+  .agent { background:var(--forest); color:#fff; border:none; }
+  .agent p { color:#cfe0d7; }
+  .gate { background:var(--amber); border-color:#f0d9a8; }
+  .gate h3 { color:var(--amber-ink); }
+  .gate p { color:var(--amber-ink); }
+  .tools { display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin-top:8px; }
+  .tools span { font-family: ui-monospace, Menlo, monospace; font-size:11.5px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:5px 6px; text-align:center; }
+  .svc h3 { display:flex; align-items:center; gap:8px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--aws); display:inline-block; }
+  .arrows { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; color:var(--muted); font-size:12px; text-align:center; }
+  .arrow { font-size:28px; color:var(--green); line-height:1; }
+  .legend { position:absolute; bottom:28px; left:48px; right:48px; display:flex; gap:28px; font-size:13px; color:var(--muted); border-top:1px solid var(--border); padding-top:14px; }
+  .legend b { color:var(--ink); }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; margin-left:6px; vertical-align:middle; }
+  .ai { background:#dfe9ff; color:#23427a; } .code { background:var(--amber); color:var(--amber-ink); }
+</style></head>
+<body><div class="sheet">
+  <h1>Plentli: agentic food rescue for Dubai kitchens</h1>
+  <p class="sub">One kitchen message becomes a safe, confirmed delivery. The agent decides; code enforces food safety.</p>
+  <div class="grid">
+    <div class="col">
+      <div class="box screen"><h3>Donor chat</h3><p>Kitchen (Mohsen) reports surplus by text, photo or voice, English or Arabic</p></div>
+      <div class="box screen"><h3>Recipient</h3><p>Shelters and community kitchens accept or decline offers and confirm receipt</p></div>
+      <div class="box screen"><h3>Driver message</h3><p>Pickup, drops, route map, picked up / delivered</p></div>
+      <div class="box screen"><h3>Live rescue and Impact</h3><p>Allocation, map, safety clock, activity trace, meals, kg and CO₂e</p></div>
+    </div>
+    <div class="arrows"><div class="arrow">⇄</div>HTTPS<br>+ live<br>stream</div>
+    <div class="aws"><span class="tag">AWS · us-west-2</span>
+      <div class="lambda">
+        <h3>AWS Lambda · public HTTPS function URL (response streaming)</h3>
+        <div class="row">
+          <div class="box"><h3>FastAPI web app</h3><p>Screens, REST API, server-sent events. Runs under the Lambda Web Adapter.</p></div>
+          <div class="box agent"><h3>Strands agent</h3><p>Plans each rescue: which tool next, how to split portions, how to re-plan after a decline. Runs in its own background invocation.</p></div>
+        </div>
+        <div class="box" style="margin-top:12px"><h3>10 tools <span class="pill code">CODE owns facts and rules</span></h3>
+          <div class="tools"><span>classify_surplus</span><span>ask_donor</span><span>get_safe_window</span><span>find_recipients</span><span>check_dietary</span><span>validate_allocation</span><span>send_offers</span><span>find_drivers</span><span>plan_route</span><span>dispatch_and_notify</span></div>
+        </div>
+        <div class="box gate" style="margin-top:12px"><h3>Food-safety gate (deterministic code)</h3><p>Safe-to-serve window, allergen and dietary checks, capacity limits, re-check on arrival. The model cannot override it.</p></div>
+      </div>
+    </div>
+    <div class="arrows"><div class="arrow">⇄</div>AWS<br>SDK</div>
+    <div class="col">
+      <div class="box svc"><h3><span class="dot"></span>Amazon Bedrock</h3><p>Claude Sonnet 4.6: agent reasoning, and reading the note and photo <span class="pill ai">AI</span></p></div>
+      <div class="box svc"><h3><span class="dot"></span>Amazon DynamoDB</h3><p>Rescues, offers, jobs, impact, and the shared live event log</p></div>
+      <div class="box svc"><h3><span class="dot"></span>Amazon Location Service</h3><p>Drive times and multi-stop routes</p></div>
+      <div class="box svc"><h3><span class="dot"></span>Amazon SNS</h3><p>Outbound notifications to kitchen, recipients and drivers</p></div>
+      <div class="box svc"><h3><span class="dot"></span>Amazon S3</h3><p>Surplus photos (private, 7-day expiry)</p></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><b>Flow:</b> message → classify → safe window → recipients → dietary check → offers → re-plan on decline → driver → route → safety gate → dispatch → receipt → impact</span>
+    <span><b>Infra:</b> CloudFormation (infra/workshop.yaml) + one-command Lambda deploy</span>
+    <span><b>Production:</b> me-central-1 (UAE) for data residency</span>
+  </div>
+</div></body></html>
