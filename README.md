@@ -37,6 +37,10 @@ All phone screens are mobile-first, work in English and Arabic (right to left), 
 
 ## How it works
 
+![Plentli architecture](docs/architecture.png)
+
+PDF: [docs/architecture.pdf](docs/architecture.pdf)
+
 ```
 Kitchen message ──▶ FastAPI ──▶ Agent (Strands on Claude via Amazon Bedrock, or the mock planner)
   (text/photo/voice)              │ chooses which tool to call next
