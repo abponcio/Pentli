@@ -1,7 +1,9 @@
 # Plentli brand guidelines
 
 **Name:** Plentli
+
 **Tagline:** Good food. More people.
+
 **Personality:** Warm, capable, calm and direct. Food sharing should feel human; operational decisions should feel trustworthy.
 
 Use `Plentli` with a capital P in every interface. Keep the Latin wordmark unmirrored in Arabic. The repo slug is different and should not appear as product copy. Name, domain and trademark availability have not yet been checked.
