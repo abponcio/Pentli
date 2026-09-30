@@ -18,7 +18,8 @@
     .qr-row img { background: #fff; padding: 8px; border-radius: 10px; border: 1px solid var(--border); flex: none; }
     .qr-row > div { min-inline-size: 0; flex: 1; display: grid; gap: 4px; }
     #judge-link { overflow-wrap: anywhere; }
-    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    .side-reset { display: flex; justify-content: flex-end; }
+    .side-reset .linkbtn { font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -36,13 +37,7 @@
         <a id="judge-link" href="/coordinator?r=r3" dir="ltr">/coordinator?r=r3</a>
       </div>
     </section>
-    <section class="card stack">
-      <div class="controls">
-        <h2 data-t="controls"></h2>
-        <button class="btn quiet small" type="button" id="reset"></button>
-      </div>
-      <p class="muted small" id="mode" dir="ltr">…</p>
-    </section>
+    <div class="side-reset"><button class="linkbtn" type="button" id="reset"></button></div>
   </main>
   <div class="toast" id="toast" role="status" hidden></div>
   <script src="/static/icons.js"></script>
@@ -57,7 +52,7 @@
       s_live: "Live rescue", s_live_sub: "Map, allocation, safety clock and activity",
       s_imp: "Impact", s_imp_sub: "Meals received and handover record",
       judge_title: "Try the recipient view", judge_hint: "Scan to open Hope Family Shelter on your phone.",
-      controls: "Controls", reset: "Start over", reset_done: "Cleared",
+      reset: "Reset data", reset_confirm: "Clear all rescues and start a fresh run on every screen?", reset_done: "Data reset",
     }, {
       hero: "طعام جيد. لعدد أكبر من الناس.",
       hero_sub: "يرسل المطبخ رسالة واحدة. يحدد Plentli نوع الطعام ومدة بقائه آمناً ومن يمكنه الاستفادة منه وأي شاحنة توصله في الوقت المناسب. قواعد سلامة الغذاء يطبقها الكود.",
@@ -67,7 +62,7 @@
       s_live: "الإنقاذ المباشر", s_live_sub: "الخريطة والتوزيع ووقت السلامة والنشاط",
       s_imp: "الأثر", s_imp_sub: "الوجبات المستلمة وسجل التسليم",
       judge_title: "جرّب واجهة الجهة المستفيدة", judge_hint: "امسح الرمز لفتح ملجأ الأمل للعائلات على هاتفك.",
-      controls: "التحكم", reset: "البدء من جديد", reset_done: "تم المسح",
+      reset: "إعادة ضبط البيانات", reset_confirm: "مسح كل عمليات الإنقاذ والبدء من جديد على كل الشاشات؟", reset_done: "تمت إعادة ضبط البيانات",
     });
 
     const SCREENS = [
@@ -79,7 +74,7 @@
         el("a", { class: "card", href }, el("span", { class: "bubble-icon" }, icon(ic, 22)),
           el("span", { class: "grow" }, el("strong", {}, t(key)), el("span", { class: "muted small" }, t(key + "_sub"))),
           icon(AR() ? "arrow-left" : "chevron-right", 20))));
-      document.getElementById("reset").replaceChildren(icon("rotate-ccw", 18), el("span", {}, t("reset")));
+      document.getElementById("reset").replaceChildren(icon("rotate-ccw", 16), el("span", {}, t("reset")));
     }
 
     mountHeader({ nav: null, tagline: true });
@@ -88,16 +83,15 @@
     document.addEventListener("langchange", render);
     (async () => {
       const cfg = await api("/api/config");
-      document.getElementById("mode").textContent =
-        `Agent: ${cfg.agent_mode === "bedrock" ? cfg.model : "mock planner (no AWS needed)"} · Store: ${cfg.store} · Routing: ${cfg.routing} · Alerts: ${cfg.notify} · Dubai time: ${cfg.now}`;
       const url = `${cfg.public_base_url || location.origin}/coordinator?r=r3`;
       const link = document.getElementById("judge-link");
       link.href = url; link.textContent = url;
       document.getElementById("qrcode").src = `/api/qr.svg?url=${encodeURIComponent(url)}`;
     })();
     document.getElementById("reset").addEventListener("click", async () => {
-      const res = await postJSON("/api/reset", {});
-      alertUser(t("reset_done"), res.now);
+      if (!confirm(t("reset_confirm"))) return;
+      await postJSON("/api/reset", {});
+      alertUser(t("reset_done"));
     });
   </script>
 </body>
