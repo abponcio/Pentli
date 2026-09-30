@@ -57,7 +57,7 @@
       <div class="avatar" id="avatar"></div>
       <div>
         <strong data-t="assistant">Your rescue assistant</strong>
-        <span class="live" data-t="demo_chat">Demo chat</span>
+        <span class="live" data-t="demo_chat">Online</span>
       </div>
     </div>
     <main class="messages" id="messages" aria-live="polite"></main>
@@ -75,7 +75,7 @@
         <button class="round" type="button" id="mic" data-t-label="voice" aria-label="Voice note"></button>
         <button class="round send" type="submit" id="send" data-t-label="send" aria-label="Send"></button>
       </form>
-      <div class="footnote" data-t="footer">Demo data · Simulated messaging</div>
+      <div class="footnote" data-t="footer">Plentli · Dubai</div>
     </div>
   </div>
   <div class="toast" id="toast" role="status" hidden></div>
@@ -84,7 +84,7 @@
   <script src="/static/app.js"></script>
   <script>
     addStrings({
-      assistant: "Your rescue assistant", demo_chat: "Demo chat", greeting: "What can we share today?",
+      assistant: "Your rescue assistant", demo_chat: "Online", greeting: "What can we share today?",
       placeholder: "Tell us what is left", add_photo: "Add a photo", remove_photo: "Remove photo", voice: "Voice note", send: "Send",
       listening: "Listening…", reading: "Reading your message…", finding: "Finding recipients…", dispatching: "Booking a driver…",
       got_it: (n) => `Got it. Finding homes for ${n} meals.`, understood: "Surplus understood",
@@ -92,7 +92,7 @@
       handovers_done: "Handovers confirmed", not_sent: "Not sent",
       try1: "50 chicken biryani, has cashews, cooked at 6", try2: "عندنا خمسين وجبة برياني دجاج، فيها كاجو، مطبوخة الساعة ٦", try3: "30 trays of pasta with cheese",
     }, {
-      assistant: "مساعد الإنقاذ", demo_chat: "محادثة تجريبية", greeting: "ماذا يمكننا أن نشارك اليوم؟",
+      assistant: "مساعد الإنقاذ", demo_chat: "متصل", greeting: "ماذا يمكننا أن نشارك اليوم؟",
       placeholder: "أخبرنا بما تبقى", add_photo: "إضافة صورة", remove_photo: "إزالة الصورة", voice: "رسالة صوتية", send: "إرسال",
       listening: "جارٍ الاستماع…", reading: "نقرأ رسالتك…", finding: "نبحث عن جهات مستفيدة…", dispatching: "نحجز سائقاً…",
       got_it: (n) => `تم. نبحث عن جهات تستفيد من ${n} وجبة.`, understood: "فهمنا الفائض",
@@ -133,7 +133,7 @@
           el("div", { class: "head" }, el("span", { class: "bubble-icon solid" }, icon("check", 20)), el("h3", {}, t("understood")), ltr((e.clock || "").slice(0, 5))),
           el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("utensils", 20)), el("div", { class: "grow" }, el("span", { class: "big" }, c.portions), " ", el("span", { class: "muted" }, `${t("portions")} · ${dishName(c)}`))),
           el("div", { class: "row" }, el("span", { class: "bubble-icon amber" }, icon("triangle-alert", 20)), el("span", { class: "chip amber" }, cap(allergenText(c.allergens)))),
-          el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("clock", 20)), el("div", { class: "grow" }, `${t("serve_by")} `, el("strong", { class: "big" }, ltr(c.safe_until)), " ", el("span", { class: "demo-rule" }, t("demo_rule"))))));
+          el("div", { class: "row" }, el("span", { class: "bubble-icon" }, icon("clock", 20)), el("div", { class: "grow" }, `${t("serve_by")} `, el("strong", { class: "big" }, ltr(c.safe_until))))));
       } else if (e.card && e.card.type === "pickup") {
         const c = e.card;
         nodes.push(el("section", { class: "result" },
