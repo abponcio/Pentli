@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a4d">
+  <title>Plenty · Charity</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="app-bar">
+    <div class="avatar" aria-hidden="true">P</div>
+    <div>
+      <div class="title" id="org-name">Plenty</div>
+      <div class="sub" id="org-sub"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="lang-toggle" type="button" data-t="switch">عربي</button>
+  </header>
+
+  <main class="wrap">
+    <section id="picker" class="card hidden">
+      <h2 data-t="pick_org">Which organisation are you?</h2>
+      <div id="org-list" style="display:grid;gap:8px;margin-block-start:10px"></div>
+    </section>
+
+    <div id="feed" class="hidden">
+      <button class="btn block" type="button" id="alerts" data-t="alerts_on">Turn on alerts</button>
+      <div id="cards" style="margin-block-start:12px"></div>
+      <div class="empty" id="waiting" data-t="waiting">No offers yet.</div>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    Object.assign(STRINGS.en, { from: "From", confirmed: "Delivery confirmed", driver_eta: "Driver arrives", thanks: "Received. Thank you!", unsafe: "Do not serve this food", org_sub: "Food offers for your organisation", halal: "Halal", open: "Open" });
+    Object.assign(STRINGS.ar, { from: "من", confirmed: "تم تأكيد التوصيل", driver_eta: "وصول السائق", thanks: "تم الاستلام. شكراً لكم!", unsafe: "لا تقدموا هذا الطعام", org_sub: "عروض الطعام لجهتكم", halal: "حلال", open: "فتح" });
+
+    const params = new URLSearchParams(location.search);
+    const RID = params.get("r");
+    const cards = document.getElementById("cards");
+    const waiting = document.getElementById("waiting");
+    const offerCards = new Map();   // offer id -> {offer, node}
+    const stopCards = new Map();    // rescue id -> {stop, node, texts}
+    let state = null;
+
+    async function boot() {
+      state = await api("/api/state");
+      if (!RID) return showPicker();
+      const me = state.recipients.find((r) => r.id === RID);
+      if (!me) return showPicker();
+      renderHeader(me);
+      document.addEventListener("langchange", () => { renderHeader(me); rerender(); });
+      document.getElementById("feed").classList.remove("hidden");
+      initAlertsButton(document.getElementById("alerts"));
+      listen(`recipient:${RID}`, onEvent);
+    }
+
+    function renderHeader(me) {
+      document.getElementById("org-name").textContent = LANG === "ar" ? me.name_ar : me.name;
+      document.getElementById("org-sub").textContent = t("org_sub");
+      document.title = `Plenty · ${me.name}`;
+    }
+
+    function showPicker() {
+      document.getElementById("picker").classList.remove("hidden");
+      const listEl = document.getElementById("org-list");
+      state.recipients.forEach((r) => listEl.append(
+        el("a", { class: "btn block", href: `/coordinator?r=${r.id}` }, LANG === "ar" ? r.name_ar : r.name)));
+    }
+
+    function onEvent(e) {
+      if (e.kind === "reset") { cards.replaceChildren(); offerCards.clear(); stopCards.clear(); waiting.hidden = false; return; }
+      if (e.kind === "message" && e.offer) { upsertOffer(e.offer, e.texts); alertUser(t("offer"), pickText(e.texts), e); }
+      else if (e.kind === "offer") upsertOffer(e.offer);
+      else if (e.kind === "message" && e.stop) { upsertStop(e.rescue_id, e.stop, e.texts); alertUser(t("confirmed"), pickText(e.texts), e); }
+      else if (e.kind === "arrived") { upsertStop(e.rescue_id, e.stop); alertUser(t("arrived"), "", e); }
+      else if (e.kind === "message" && e.alert) { showUnsafe(e.texts); alertUser(t("unsafe"), pickText(e.texts), e); }
+      else if (e.kind === "message") { cards.prepend(el("div", { class: "card" }, pickText(e.texts))); }
+      waiting.hidden = cards.children.length > 0;
+    }
+
+    function upsertOffer(offer, texts) {
+      const prev = offerCards.get(offer.id);
+      const entry = { offer, texts: texts || prev?.texts };
+      const node = renderOffer(entry);
+      if (prev) prev.node.replaceWith(node); else cards.prepend(node);
+      entry.node = node;
+      offerCards.set(offer.id, entry);
+    }
+
+    function renderOffer({ offer }) {
+      const pending = offer.status === "pending";
+      const statusBadge = {
+        accepted: el("span", { class: "badge good" }, t("accepted")),
+        declined: el("span", { class: "badge bad" }, t("declined")),
+        expired: el("span", { class: "badge" }, t("expired")),
+      }[offer.status];
+      const card = el("article", { class: "card offer" },
+        el("div", { class: "row", style: "align-items:center" },
+          el("h2", {}, t("offer")), el("div", { style: "text-align:end;flex:none" }, statusBadge || el("span", { class: "badge warn" }, "●"))),
+        el("div", { class: "big" }, `${offer.portions} × ${LANG === "ar" ? offer.dish_ar : offer.dish}`),
+        el("dl", { class: "facts" },
+          el("dt", {}, t("from")), el("dd", {}, "HelloChef Kitchen, Al Quoz"),
+          el("dt", {}, t("allergens")), el("dd", {}, allergenText(offer.allergens)),
+          el("dt", {}, t("halal")), el("dd", {}, "✓"),
+          el("dt", {}, t("arrives")), el("dd", {}, offer.eta),
+          el("dt", {}, t("serve_by")), el("dd", {}, el("strong", {}, offer.safe_until))),
+      );
+      if (pending) {
+        card.append(el("div", { class: "row" },
+          el("button", { class: "btn", type: "button", onclick: () => respond(offer.id, "decline") }, t("decline")),
+          el("button", { class: "btn primary", type: "button", onclick: () => respond(offer.id, "accept") }, t("accept"))));
+      }
+      return card;
+    }
+
+    async function respond(offerId, decision) {
+      try { await postJSON(`/api/offers/${offerId}/respond`, { decision }); }
+      catch (err) { alertUser(t("expired"), ""); }
+    }
+
+    function upsertStop(rescueId, stop, texts) {
+      const prev = stopCards.get(rescueId);
+      const entry = { rescueId, stop: { ...(prev?.stop || {}), ...stop }, texts: texts || prev?.texts };
+      const node = renderStop(entry);
+      if (prev) prev.node.replaceWith(node); else cards.prepend(node);
+      entry.node = node;
+      stopCards.set(rescueId, entry);
+    }
+
+    function renderStop({ rescueId, stop, texts }) {
+      const card = el("article", { class: "card ok-banner" }, el("h2", {}, t("confirmed")), el("p", {}, pickText(texts)));
+      if (stop.status === "delivered") {
+        card.append(el("p", {}, el("strong", {}, t("arrived"))),
+          el("button", { class: "btn primary block", type: "button", onclick: async (ev) => {
+            ev.target.disabled = true;
+            try {
+              await postJSON("/api/stops", { rescue_id: rescueId, stop_id: RID, action: "received" });
+              upsertStop(rescueId, { status: "received" });
+            } catch (err) { ev.target.disabled = false; alertUser("Error", err.message); }
+          } }, t("received")));
+      } else if (stop.status === "received") {
+        card.append(el("p", {}, el("strong", {}, t("thanks"))));
+      }
+      return card;
+    }
+
+    function showUnsafe(texts) {
+      cards.prepend(el("div", { class: "card alert", role: "alert" }, `⚠ ${t("unsafe")}. ${pickText(texts)}`));
+    }
+
+    function rerender() {
+      for (const entry of offerCards.values()) { const n = renderOffer(entry); entry.node.replaceWith(n); entry.node = n; }
+      for (const entry of stopCards.values()) { const n = renderStop(entry); entry.node.replaceWith(n); entry.node = n; }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

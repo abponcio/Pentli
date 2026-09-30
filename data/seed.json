@@ -1,0 +1,143 @@
+{
+  "donors": [
+    {
+      "id": "k1",
+      "name": "HelloChef Kitchen, Al Quoz",
+      "contact": "Mohsen",
+      "role": "Kitchen operations lead",
+      "lat": 25.1368,
+      "lng": 55.2297,
+      "lang": "en"
+    }
+  ],
+  "recipients": [
+    {
+      "id": "r1",
+      "name": "Al Quoz Community Kitchen",
+      "name_ar": "مطبخ القوز المجتمعي",
+      "type": "community_kitchen",
+      "coordinator": "Ravi",
+      "lat": 25.1450,
+      "lng": 55.2350,
+      "need_tonight": 30,
+      "priority": 1,
+      "open_from": "17:00",
+      "open_to": "23:59",
+      "excludes_allergens": [],
+      "halal_required": true,
+      "has_fridge": true,
+      "lang": "en",
+      "responder": "auto_accept"
+    },
+    {
+      "id": "r2",
+      "name": "Sunrise Elderly Care Home",
+      "name_ar": "دار الشروق لرعاية المسنين",
+      "type": "care_home",
+      "coordinator": "Fatima",
+      "lat": 25.1180,
+      "lng": 55.2050,
+      "need_tonight": 15,
+      "priority": 1,
+      "open_from": "17:00",
+      "open_to": "23:59",
+      "excludes_allergens": ["tree_nuts", "peanuts"],
+      "halal_required": true,
+      "has_fridge": true,
+      "lang": "ar",
+      "responder": "auto_accept"
+    },
+    {
+      "id": "r3",
+      "name": "Hope Family Shelter",
+      "name_ar": "مأوى الأمل للعائلات",
+      "type": "shelter",
+      "coordinator": "You (judge)",
+      "lat": 25.1580,
+      "lng": 55.2480,
+      "need_tonight": 20,
+      "priority": 1,
+      "open_from": "17:00",
+      "open_to": "23:59",
+      "excludes_allergens": [],
+      "halal_required": true,
+      "has_fridge": true,
+      "lang": "ar",
+      "responder": "human"
+    },
+    {
+      "id": "r4",
+      "name": "Al Barsha Community Fridge",
+      "name_ar": "ثلاجة البرشاء المجتمعية",
+      "type": "community_fridge",
+      "coordinator": "Omar",
+      "lat": 25.1120,
+      "lng": 55.1980,
+      "need_tonight": 20,
+      "priority": 2,
+      "open_from": "00:00",
+      "open_to": "23:59",
+      "excludes_allergens": [],
+      "halal_required": true,
+      "has_fridge": true,
+      "lang": "ar",
+      "responder": "auto_accept"
+    },
+    {
+      "id": "r5",
+      "name": "Jebel Ali Workers' Canteen",
+      "name_ar": "مقصف عمال جبل علي",
+      "type": "canteen",
+      "coordinator": "Suresh",
+      "lat": 25.0100,
+      "lng": 55.1100,
+      "need_tonight": 40,
+      "priority": 1,
+      "open_from": "18:00",
+      "open_to": "23:00",
+      "excludes_allergens": [],
+      "halal_required": true,
+      "has_fridge": true,
+      "lang": "en",
+      "responder": "auto_accept"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "d1",
+      "name": "HelloChef Van 14",
+      "driver": "Imran",
+      "kind": "returning_van",
+      "status": "returning from JLT deliveries",
+      "lat": 25.1180,
+      "lng": 55.2000,
+      "cold_box": true,
+      "capacity_portions": 80,
+      "lang": "ur"
+    },
+    {
+      "id": "d2",
+      "name": "HelloChef Van 07",
+      "driver": "Joseph",
+      "kind": "returning_van",
+      "status": "returning from Downtown deliveries",
+      "lat": 25.2050,
+      "lng": 55.2750,
+      "cold_box": true,
+      "capacity_portions": 80,
+      "lang": "en"
+    },
+    {
+      "id": "d3",
+      "name": "Volunteer driver",
+      "driver": "Sara",
+      "kind": "volunteer",
+      "status": "available",
+      "lat": 25.2280,
+      "lng": 55.3100,
+      "cold_box": false,
+      "capacity_portions": 30,
+      "lang": "en"
+    }
+  ]
+}

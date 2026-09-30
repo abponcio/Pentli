@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a4d">
+  <title>Plenty · Kitchen</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="chat">
+    <header class="app-bar">
+      <div class="avatar" aria-hidden="true">P</div>
+      <div>
+        <div class="title" data-t="plenty">Plenty</div>
+        <div class="sub" id="sub" data-t="online">rescue agent, online</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="lang-toggle" type="button" data-t="switch">عربي</button>
+    </header>
+
+    <main class="messages" id="messages" aria-live="polite">
+      <div class="empty" id="intro">
+        <strong>HelloChef Kitchen, Al Quoz</strong><br>
+        <span class="muted" data-t="kitchen_intro">Tell Plenty what's left over. A photo and one line is enough.</span>
+      </div>
+    </main>
+
+    <div class="composer">
+      <div class="chips" id="chips">
+        <button class="chip" type="button" data-t="try1"></button>
+        <button class="chip" type="button" data-t="try2"></button>
+        <button class="chip" type="button" data-t="try3"></button>
+      </div>
+      <div class="preview hidden" id="preview">
+        <img id="preview-img" alt="">
+        <button class="btn" type="button" id="clear-photo">✕</button>
+      </div>
+      <form class="composer-inner" id="form">
+        <label class="icon-btn" data-t-label="photo" aria-label="Add photo">
+          📷
+          <input type="file" id="photo" accept="image/*" capture="environment" class="hidden">
+        </label>
+        <textarea id="text" rows="1" data-t-placeholder="placeholder" placeholder="Describe the surplus"></textarea>
+        <button class="icon-btn" type="button" id="mic" data-t-label="mic" aria-label="Voice note">🎤</button>
+        <button class="icon-btn send" type="submit" data-t-label="send" aria-label="Send">➤</button>
+      </form>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    Object.assign(STRINGS.en, { kitchen_intro: "Tell Plenty what's left over. A photo and one line is enough." });
+    Object.assign(STRINGS.ar, { kitchen_intro: "أخبر بلنتي بما تبقى من طعام. تكفي صورة وسطر واحد." });
+
+    const DONOR = new URLSearchParams(location.search).get("k") || "k1";
+    const list = document.getElementById("messages");
+    const form = document.getElementById("form");
+    const text = document.getElementById("text");
+    const photo = document.getElementById("photo");
+    const preview = document.getElementById("preview");
+    const mic = document.getElementById("mic");
+    let typing = null;
+    const rendered = [];
+
+    function scrollDown() { window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }
+
+    function setTyping(on) {
+      if (on && !typing) { typing = el("div", { class: "typing" }, t("thinking")); list.append(typing); scrollDown(); }
+      if (!on && typing) { typing.remove(); typing = null; }
+    }
+
+    function renderMessage(e) {
+      document.getElementById("intro")?.remove();
+      const mine = e.sender === "kitchen";
+      const bubble = el("div", { class: `bubble ${mine ? "me" : "them"}` });
+      if (e.photo_url) bubble.append(el("img", { src: e.photo_url, alt: "" }));
+      const body = el("span", {}, pickText(e.texts));
+      bubble.append(body, el("span", { class: "meta" }, (e.clock || "").slice(0, 5)));
+      rendered.push({ e, body });
+      if (typing && !mine) typing.before(bubble); else list.append(bubble);
+      scrollDown();
+    }
+
+    document.addEventListener("langchange", () => {
+      rendered.forEach(({ e, body }) => { body.textContent = pickText(e.texts); });
+      if (typing) typing.textContent = t("thinking");
+    });
+
+    listen(`kitchen:${DONOR}`, (e) => {
+      if (e.kind === "reset") { list.replaceChildren(); rendered.length = 0; setTyping(false); return; }
+      if (e.kind !== "message") return;
+      renderMessage(e);
+      if (e.sender === "kitchen") setTyping(true);
+      else {
+        setTyping(false);
+        if (document.visibilityState === "hidden") alertUser("Plenty", pickText(e.texts), e);
+      }
+    });
+
+    document.querySelectorAll(".chip").forEach((chip) => chip.addEventListener("click", () => {
+      text.value = chip.textContent; text.focus();
+    }));
+
+    photo.addEventListener("change", () => {
+      const file = photo.files[0];
+      if (!file) return;
+      document.getElementById("preview-img").src = URL.createObjectURL(file);
+      preview.classList.remove("hidden");
+    });
+    document.getElementById("clear-photo").addEventListener("click", () => {
+      photo.value = ""; preview.classList.add("hidden");
+    });
+
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (!text.value.trim() && !photo.files[0]) return;
+      const data = new FormData();
+      data.append("donor_id", DONOR);
+      data.append("text", text.value.trim());
+      if (photo.files[0]) data.append("photo", photo.files[0]);
+      text.value = ""; photo.value = ""; preview.classList.add("hidden");
+      try { await api("/api/kitchen/message", { method: "POST", body: data }); }
+      catch (err) { alertUser("Not sent", err.message); }
+    });
+    text.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); form.requestSubmit(); }
+    });
+
+    // Voice note: the browser's speech recognition fills the text box (Amazon Transcribe is on the roadmap).
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) mic.hidden = true;
+    let recognizer = null;
+    mic.addEventListener("click", () => {
+      if (recognizer) { recognizer.stop(); return; }
+      recognizer = new Recognition();
+      recognizer.lang = LANG === "ar" ? "ar-AE" : "en-US";
+      recognizer.interimResults = true;
+      const before = text.value ? text.value + " " : "";
+      recognizer.onresult = (ev) => {
+        text.value = before + Array.from(ev.results).map((r) => r[0].transcript).join("");
+      };
+      recognizer.onend = () => { mic.classList.remove("recording"); text.placeholder = t("placeholder"); recognizer = null; };
+      recognizer.onerror = recognizer.onend;
+      mic.classList.add("recording");
+      text.placeholder = t("listening");
+      recognizer.start();
+    });
+  </script>
+</body>
+</html>

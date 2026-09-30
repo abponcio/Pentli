@@ -1,0 +1,7 @@
+fastapi==0.142.1
+uvicorn==0.54.0
+python-multipart==0.0.32
+pydantic==2.13.5
+boto3==1.43.105
+strands-agents==1.57.1
+qrcode==8.2

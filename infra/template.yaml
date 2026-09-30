@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Plenty (agentic food rescue) - supporting resources for the hackathon demo:
+  DynamoDB table, SNS topic, private S3 photo bucket, and one IAM role the app runs as.
+  The app itself (container or EC2) is deployed separately; see infra/DEPLOY.md.
+
+Parameters:
+  Stage:
+    Type: String
+    Default: demo
+    AllowedPattern: "[a-z0-9-]+"
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Optional email to subscribe to the SNS topic (confirm the email AWS sends).
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+
+Resources:
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub plenty-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      SSESpecification: { SSEEnabled: true }
+
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub plenty-${Stage}-notifications
+      KmsMasterKeyId: alias/aws/sns
+
+  TopicEmail:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref Topic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  PhotoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub plenty-${Stage}-photos-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      LifecycleConfiguration:
+        Rules:
+          - { Id: expire-demo-photos, Status: Enabled, ExpirationInDays: 7 }
+
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub plenty-${Stage}-app
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - ecs-tasks.amazonaws.com
+                - tasks.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: plenty-app
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Bedrock
+                Effect: Allow
+                # The Converse and ConverseStream APIs are authorised by these two actions.
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                # Global cross-Region inference routes to foundation models in other Regions,
+                # so the model and inference-profile resources cannot be pinned to one Region.
+                Resource:
+                  - arn:aws:bedrock:*::foundation-model/*
+                  - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
+              - Sid: Routes
+                Effect: Allow
+                Action: geo-routes:CalculateRoutes
+                Resource: !Sub arn:aws:geo-routes:${AWS::Region}::provider/default
+              - Sid: Table
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                Resource: !GetAtt Table.Arn
+              - Sid: Notify
+                Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref Topic
+              - Sid: Photos
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub ${PhotoBucket.Arn}/*
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub plenty-${Stage}-app
+      Roles: [!Ref AppRole]
+
+Outputs:
+  TableName:
+    Description: Set as DDB_TABLE
+    Value: !Ref Table
+  TopicArn:
+    Description: Set as SNS_TOPIC_ARN
+    Value: !Ref Topic
+  PhotoBucketName:
+    Description: Set as PHOTO_BUCKET
+    Value: !Ref PhotoBucket
+  AppRoleArn:
+    Value: !GetAtt AppRole.Arn
+  AppInstanceProfile:
+    Description: Attach to the EC2 instance if you run the app on EC2.
+    Value: !Ref AppInstanceProfile
